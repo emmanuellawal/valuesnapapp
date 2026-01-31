@@ -1,0 +1,150 @@
+# generated: 2025-12-12
+# project: valuesnapapp
+# project_key: valuesnap
+# tracking_system: file-system
+# story_location: docs/sprint-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - drafted: Story file created in stories folder
+#   - ready-for-dev: Draft approved and story context created
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - completed: Retrospective has been done
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically drafts next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2025-12-12
+project: valuesnapapp
+project_key: valuesnap
+tracking_system: file-system
+story_location: docs/sprint-artifacts
+
+development_status:
+  # Epic 0: Developer Foundation (10 stories completed + retrospective)
+  epic-0: done
+  0-1-initialize-expo-project-with-tabs-template: done
+  0-2-configure-nativewind-and-swiss-design-tokens: done
+  0-3-create-primitive-components: done
+  0-4-set-up-mock-infrastructure: done
+  0-5-create-skeleton-loader-components: done
+  0-6-define-shared-typescript-types-and-interfaces: done
+  0-7-configure-environment-variables: done
+  0-8-set-up-global-error-boundary: done
+  0-9-polish-camera-screen-swiss-design: done
+  0-10-polish-history-and-settings-tabs-swiss-design: done
+  epic-0-retrospective: completed
+
+  # Epic 1: Camera Capture (6 stories completed)
+  epic-1: done
+  1-1-implement-mobile-camera-capture: done
+  1-2-implement-file-upload-for-desktop: done
+  1-3-handle-camera-permission-denied: done
+  1-4-photo-preview-and-retake: done
+  1-5-photo-quality-validation: done
+  1-6-cross-platform-camera-verification: done
+  epic-1-retrospective: completed
+
+  # Epic 2: AI Valuation Engine (11 stories)
+  epic-2: in-progress
+  2-1-create-valuation-api-endpoint: done
+  2-2-integrate-ai-item-identification: review
+  2-3-implement-cache-layer-for-ebay-api: backlog
+  2-4-integrate-ebay-market-data: backlog
+  2-5-implement-confidence-calculation-service: backlog
+  2-6-build-valuationcard-component: backlog
+  2-7-display-processing-progress-states: backlog
+  2-8-handle-ai-identification-failures: backlog
+  2-9-handle-insufficient-market-data: backlog
+  2-10-display-confidence-based-messaging: backlog
+  2-11-display-market-velocity-indicator: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: History & Persistence (5 stories)
+  epic-3: backlog
+  3-1-create-valuations-database-schema: backlog
+  3-2-implement-save-valuation-flow: backlog
+  3-3-build-history-list-view: backlog
+  3-4-display-valuation-details: backlog
+  3-5-implement-offline-viewing: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: User Authentication (11 stories)
+  epic-4: backlog
+  4-1-configure-supabase-auth: backlog
+  4-2-implement-user-registration: backlog
+  4-3-implement-user-sign-in: backlog
+  4-4-implement-google-oauth-sign-in: backlog
+  4-5-implement-sign-out: backlog
+  4-6-implement-session-persistence: backlog
+  4-7-implement-guest-mode: backlog
+  4-8-build-settings-screen: backlog
+  4-9-implement-account-deletion-confirmation: backlog
+  4-10-execute-account-deletion: backlog
+  4-11-migrate-guest-data-to-account: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Listing Creation (10 stories)
+  epic-5: backlog
+  5-1-build-listing-form-component: backlog
+  5-2-pre-fill-title-from-ai-identification: backlog
+  5-3-pre-fill-description-from-ai: backlog
+  5-4-pre-fill-price-from-valuation: backlog
+  5-5-pre-fill-category-from-ai-classification: backlog
+  5-6-pre-fill-condition-from-ai-assessment: backlog
+  5-7-include-original-photo-in-listing: backlog
+  5-8-enable-field-editing: backlog
+  5-9-implement-copy-to-clipboard: backlog
+  5-10-display-pre-filled-vs-manual-field-distinction: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: Platform & PWA (10 stories)
+  epic-6: backlog
+  6-1-implement-tab-navigation: backlog
+  6-2-implement-responsive-grid-system: backlog
+  6-3-configure-pwa-manifest: backlog
+  6-4-implement-service-worker-for-offline: backlog
+  6-5-build-marketing-landing-page: backlog
+  6-6-handle-network-errors: backlog
+  6-7-implement-retry-mechanism: backlog
+  6-8-handle-rate-limit-exceeded: backlog
+  6-9-implement-mobile-ux-patterns: backlog
+  6-10-implement-desktop-ux-patterns: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7: Accessibility & Polish (12 stories)
+  epic-7: backlog
+  7-1-implement-color-contrast-compliance: backlog
+  7-2-ensure-touch-target-sizes: backlog
+  7-3-implement-focus-indicators: backlog
+  7-4-add-meaningful-alt-text: backlog
+  7-5-implement-semantic-html-structure: backlog
+  7-6-announce-errors-to-screen-readers: backlog
+  7-7-optimize-bundle-size: backlog
+  7-8-achieve-performance-targets: backlog
+  7-9-set-up-github-actions-ci-cd: backlog
+  7-10-implement-reduced-motion-support: backlog
+  7-11-cross-browser-testing: backlog
+  7-12-configure-production-monitoring: backlog
+  epic-7-retrospective: optional
+

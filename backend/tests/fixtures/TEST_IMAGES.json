@@ -1,0 +1,152 @@
+{
+  "description": "Test images for AI identification validation. Includes positive and negative test cases.",
+  "version": "1.0.0",
+  "positive_cases": [
+    {
+      "id": "canon_camera",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Canon_AE-1.jpg/640px-Canon_AE-1.jpg",
+      "expected": {
+        "item_type_contains": ["camera", "slr", "film camera"],
+        "brand_contains": ["canon", "Canon"],
+        "min_confidence": "MEDIUM"
+      },
+      "notes": "Classic Canon AE-1 film camera - well-known product"
+    },
+    {
+      "id": "nintendo_switch",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/NintendoSwitch.png/640px-NintendoSwitch.png",
+      "expected": {
+        "item_type_contains": ["gaming console", "console", "video game", "switch"],
+        "brand_contains": ["nintendo", "Nintendo"],
+        "min_confidence": "HIGH"
+      },
+      "notes": "Nintendo Switch - distinctive design"
+    },
+    {
+      "id": "vintage_record",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/12in-Vinyl-LP-Record-Angle.jpg/640px-12in-Vinyl-LP-Record-Angle.jpg",
+      "expected": {
+        "item_type_contains": ["vinyl", "record", "lp", "album"],
+        "brand_contains": [],
+        "min_confidence": "LOW"
+      },
+      "notes": "Generic vinyl record - brand may not be identifiable"
+    },
+    {
+      "id": "apple_iphone",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/IPhone_14_Pro_vector.svg/640px-IPhone_14_Pro_vector.svg.png",
+      "expected": {
+        "item_type_contains": ["phone", "smartphone", "iphone", "mobile"],
+        "brand_contains": ["apple", "Apple"],
+        "min_confidence": "MEDIUM"
+      },
+      "notes": "iPhone - iconic design"
+    },
+    {
+      "id": "nike_shoes",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Nike-Logo.svg/640px-Nike-Logo.svg.png",
+      "expected": {
+        "item_type_contains": ["logo", "brand", "athletic"],
+        "brand_contains": ["nike", "Nike"],
+        "min_confidence": "HIGH"
+      },
+      "notes": "Nike logo - testing brand recognition"
+    },
+    {
+      "id": "rolex_watch",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Rolex_Submariner.jpg/640px-Rolex_Submariner.jpg",
+      "expected": {
+        "item_type_contains": ["watch", "wristwatch", "timepiece"],
+        "brand_contains": ["rolex", "Rolex"],
+        "min_confidence": "HIGH"
+      },
+      "notes": "Rolex Submariner - luxury watch"
+    },
+    {
+      "id": "sony_headphones",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Sony_WH-1000XM4.jpg/640px-Sony_WH-1000XM4.jpg",
+      "expected": {
+        "item_type_contains": ["headphones", "audio", "wireless"],
+        "brand_contains": ["sony", "Sony"],
+        "min_confidence": "HIGH"
+      },
+      "notes": "Sony WH-1000XM4 headphones - specific model"
+    },
+    {
+      "id": "herman_miller_chair",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/HermanMiller_Aeron_chair.JPG/640px-HermanMiller_Aeron_chair.JPG",
+      "expected": {
+        "item_type_contains": ["chair", "office", "furniture"],
+        "brand_contains": ["herman", "miller", "Herman Miller"],
+        "min_confidence": "MEDIUM"
+      },
+      "notes": "Herman Miller Aeron chair - distinctive mesh design"
+    },
+    {
+      "id": "fender_guitar",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Fender_Stratocaster_tremolo_bridge%2C_MIM_%282012-01-12_by_Dianna_Dykes%29.jpg/640px-Fender_Stratocaster_tremolo_bridge%2C_MIM_%282012-01-12_by_Dianna_Dykes%29.jpg",
+      "expected": {
+        "item_type_contains": ["guitar", "musical instrument", "stratocaster"],
+        "brand_contains": ["fender", "Fender"],
+        "min_confidence": "MEDIUM"
+      },
+      "notes": "Fender Stratocaster - classic guitar"
+    },
+    {
+      "id": "lego_set",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/LEGO_logo.svg/640px-LEGO_logo.svg.png",
+      "expected": {
+        "item_type_contains": ["logo", "toy", "brand"],
+        "brand_contains": ["lego", "LEGO"],
+        "min_confidence": "HIGH"
+      },
+      "notes": "LEGO logo - testing brand recognition"
+    }
+  ],
+  "negative_cases": [
+    {
+      "id": "abstract_art",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/640px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
+      "expected": {
+        "brand": "unknown",
+        "min_confidence": "LOW",
+        "accepts_unknown": true
+      },
+      "notes": "Starry Night painting - no product to identify, should return LOW confidence"
+    },
+    {
+      "id": "blurry_photo",
+      "description": "Simulated blurry image - use a heavily compressed/pixelated image",
+      "expected": {
+        "min_confidence": "LOW",
+        "accepts_unknown": true
+      },
+      "notes": "Should handle gracefully with LOW confidence"
+    },
+    {
+      "id": "empty_room",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Living_room.jpg/640px-Living_room.jpg",
+      "expected": {
+        "item_type_contains": ["room", "furniture", "interior"],
+        "min_confidence": "LOW",
+        "accepts_unknown": true
+      },
+      "notes": "Room scene - no single product focus, should return LOW confidence or identify dominant item"
+    },
+    {
+      "id": "text_only",
+      "description": "Image containing only text",
+      "expected": {
+        "accepts_unknown": true,
+        "min_confidence": "LOW"
+      },
+      "notes": "Text-only image - no product, should return unknown or LOW confidence"
+    }
+  ],
+  "test_requirements": {
+    "min_success_rate": 0.8,
+    "success_criteria": "8/10 positive cases must return correct item category",
+    "timing_threshold_seconds": 10,
+    "notes": "Tests validate AC3: at least 8/10 test images return correct item category"
+  }
+}

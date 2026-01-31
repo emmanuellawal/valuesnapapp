@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Swiss Minimalist Design System */
+/*
+  Token variables power light/dark mode without adding new Tailwind classes.
+  Tailwind color tokens (bg-paper, text-ink, bg-divider, etc.) resolve to these.
+*/
+:root {
+  --paper: 255 255 255;
+  --ink: 0 0 0;
+  --ink-light: 102 102 102;
+  --ink-muted: 153 153 153;
+  --signal: 229 57 53;
+  --divider: 224 224 224;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: 0 0 0;
+    --ink: 255 255 255;
+    --ink-light: 179 179 179;
+    --ink-muted: 128 128 128;
+    --signal: 229 57 53;
+    --divider: 51 51 51;
+  }
+}
+
+/* Ensure background follows paper token across RN Web containers */
+html,
+body,
+#root,
+#root > div,
+body > div,
+body > div > div {
+  background-color: rgb(var(--paper)) !important;
+  color: rgb(var(--ink));
+}
+
