@@ -1,0 +1,21 @@
+# BMAD BMM Workflow Status
+# Tracks completion status of various workflows
+
+workflow_status:
+  product-brief:
+    file: "docs/analysis/product-brief-valuesnapapp-2025-12-09.md"
+    completed: true
+    completed_date: "2025-12-09"
+    workflow_type: "product-brief"
+    steps_completed: [1, 2, 3, 4, 5]
+    user: "Elawa"
+    project: "valuesnapapp"
+
+
+
+
+
+
+
+
+

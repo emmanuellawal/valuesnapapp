@@ -45,9 +45,9 @@ export function ValuationCardSkeleton() {
       <ShimmerBox className="aspect-square bg-divider" />
 
       <Stack gap={1} className="p-3">
-        <ShimmerBox className="h-5 w-3/4 bg-divider rounded-sm" />
-        <ShimmerBox className="h-7 w-1/2 bg-divider rounded-sm" />
-        <ShimmerBox className="h-3 w-2/3 bg-divider rounded-sm" />
+        <ShimmerBox className="h-5 w-3/4 bg-divider" />
+        <ShimmerBox className="h-7 w-1/2 bg-divider" />
+        <ShimmerBox className="h-3 w-2/3 bg-divider" />
       </Stack>
     </Box>
   );

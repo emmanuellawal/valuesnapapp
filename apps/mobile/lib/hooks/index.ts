@@ -6,3 +6,6 @@
 
 export { useDeviceCapabilities } from './useDeviceCapabilities';
 export type { DeviceCapabilities } from './useDeviceCapabilities';
+
+export { useProgressStages } from './useProgressStages';
+export type { UseProgressStagesOptions, UseProgressStagesReturn } from './useProgressStages';

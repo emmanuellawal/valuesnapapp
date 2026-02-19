@@ -1,0 +1,62 @@
+name: validate-create-story
+description: "Perform exhaustive validation of a newly created story file by re-analyzing all source documents with fresh context, identifying gaps and improvements, and generating a competitive validation report"
+author: "BMad"
+
+# Critical variables from config
+config_source: "{project-root}/.bmad/bmm/config.yaml"
+output_folder: "{config_source}:output_folder"
+user_name: "{config_source}:user_name"
+communication_language: "{config_source}:communication_language"
+user_skill_level: "{config_source}:user_skill_level"
+document_output_language: "{config_source}:document_output_language"
+date: system-generated
+sprint_artifacts: "{config_source}:sprint_artifacts"
+story_dir: "{sprint_artifacts}"
+
+# Workflow components
+installed_path: "{project-root}/.bmad/bmm/workflows/4-implementation/validate-create-story"
+instructions: "{installed_path}/instructions.xml"
+validation: "{installed_path}/checklist.md"
+template: false
+
+# Variables and inputs
+variables:
+  sprint_status: "{sprint_artifacts}/sprint-status.yaml || {output_folder}/sprint-status.yaml"
+  story_path: "" # Story file path - provided by user or auto-discovered
+  story_key: "" # Extracted from story file (e.g., "0-3-create-primitive-components")
+  epic_num: "" # Extracted from story key
+  validation_report: "{story_dir}/{{story_key}}-validation-report.md"
+
+# Project context
+project_context: "**/project-context.md"
+
+# Smart input file references - same as create-story + additional context
+input_file_patterns:
+  epics:
+    description: "Epic containing story being validated"
+    whole: "{output_folder}/*epic*.md"
+    sharded_index: "{output_folder}/*epic*/index.md"
+    sharded_single: "{output_folder}/*epic*/epic-{{epic_num}}.md"
+    load_strategy: "SELECTIVE_LOAD"
+  architecture:
+    description: "System architecture for validation context"
+    whole: "{output_folder}/*architecture*.md"
+    sharded: "{output_folder}/*architecture*/*.md"
+    load_strategy: "FULL_LOAD"
+  ux_design:
+    description: "UX design specification"
+    whole: "{output_folder}/*ux*.md"
+    sharded: "{output_folder}/*ux*/*.md"
+    load_strategy: "FULL_LOAD"
+  swiss_design:
+    description: "Swiss Minimalist design constraints"
+    whole: "{output_folder}/*SWISS*.md"
+    sharded: "{output_folder}/*swiss*/*.md"
+    load_strategy: "FULL_LOAD"
+  previous_stories:
+    description: "Previous stories in same epic for learnings"
+    whole: "{story_dir}/{{epic_num}}-*.md"
+    load_strategy: "FULL_LOAD"
+
+standalone: true
+

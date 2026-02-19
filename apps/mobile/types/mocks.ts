@@ -87,6 +87,7 @@ export function createMockMarketData(
       fairMarketValue: overrides?.fairMarketValue ?? 150,
       mean: overrides?.mean ?? 145,
       stdDev: overrides?.stdDev ?? 25,
+      avgDaysToSell: overrides?.avgDaysToSell ?? 7,
       confidence: overrides?.confidence ?? 'HIGH',
     };
   }

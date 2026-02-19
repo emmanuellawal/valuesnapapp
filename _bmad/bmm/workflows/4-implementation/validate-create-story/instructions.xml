@@ -1,0 +1,480 @@
+<workflow>
+  <critical>The workflow execution engine is governed by: {project-root}/{bmad_folder}/core/tasks/workflow.xml</critical>
+  <critical>You MUST have already loaded and processed: {installed_path}/workflow.yaml</critical>
+  <critical>Communicate all responses in {communication_language} and language MUST be tailored to {user_skill_level}</critical>
+  <critical>Generate all documents in {document_output_language}</critical>
+
+  <critical>🔥 YOU ARE A STORY VALIDATOR - Competitive quality assurance for story files! 🔥</critical>
+  <critical>Your purpose: Validate story file quality by re-analyzing all source documents with FRESH CONTEXT</critical>
+  <critical>Core question: "Can Amelia (DEV agent) implement this story without asking any clarification questions?"</critical>
+  <critical>Find gaps, improvements, and missing context - celebrate when you find improvements OR confirm quality!</critical>
+  <critical>FRESH CONTEXT PROTOCOL: You MUST operate with zero knowledge of original story creation - load documents independently</critical>
+  <critical>Competitive but constructive: Celebrate validator success while being educational about why improvements were missed</critical>
+
+  <step n="1" goal="Initialize & Load Story">
+    <action>Use provided {{story_path}} or auto-discover from sprint-status.yaml</action>
+    
+    <check if="{{story_path}} is provided by user">
+      <action>Use user-provided story path directly</action>
+      <action>Read COMPLETE story file</action>
+      <action>Extract {{story_key}} from filename (e.g., "0-3-create-primitive-components.md" → "0-3-create-primitive-components")</action>
+      <action>Extract {{epic_num}} from story key (first number before dash)</action>
+      <goto step="2" />
+    </check>
+
+    <check if="{{story_path}} is NOT provided">
+      <action>Load the FULL file: {{sprint_status}}</action>
+      <action>Read ALL lines from beginning to end - do not skip any content</action>
+      <action>Parse the development_status section completely</action>
+      
+      <action>Find the FIRST story (by reading in order from top to bottom) where:
+        - Key matches pattern: number-number-name (e.g., "0-3-create-primitive-components")
+        - NOT an epic key (epic-X) or retrospective (epic-X-retrospective)
+        - Status value equals "drafted" OR "ready-for-dev"
+      </action>
+
+      <check if="no drafted or ready-for-dev story found">
+        <output>📋 No stories found in "drafted" or "ready-for-dev" status
+
+          **Options:**
+          1. Provide specific story file path to validate
+          2. Run `create-story` to create a new story first
+          3. Check sprint-status.yaml for available stories
+        </output>
+        <ask>Choose option [1], [2], or provide story file path:</ask>
+
+        <check if="user chooses '1' or provides story path">
+          <action>Store user-provided story path as {{story_path}}</action>
+          <action>Read COMPLETE story file</action>
+          <action>Extract {{story_key}} and {{epic_num}}</action>
+          <goto step="2" />
+        </check>
+
+        <check if="user chooses '2'">
+          <action>HALT - User needs to create story first</action>
+        </check>
+      </check>
+
+      <check if="story found">
+        <action>Extract {{story_key}} from found story</action>
+        <action>Extract {{epic_num}} from story key</action>
+        <action>Set {{story_path}} = "{story_dir}/{{story_key}}.md"</action>
+        <action>Read COMPLETE story file</action>
+      </check>
+    </check>
+
+    <action>Verify story Status is "drafted" OR "ready-for-dev"</action>
+    <check if="story status is NOT drafted or ready-for-dev">
+      <output>🚫 Story status is "{{story_status}}" - validation only works for "drafted" or "ready-for-dev" stories</output>
+      <action>HALT - Invalid story status</action>
+    </check>
+
+    <action>Parse story sections: Story, Acceptance Criteria, Tasks/Subtasks, Dev Notes, Dev Agent Record, File List, Change Log, Status</action>
+    <action>Store original story content for comparison</action>
+    
+    <output>✅ **Story Loaded**
+
+      **Story:** {{story_key}}
+      **Status:** {{story_status}}
+      **File:** {{story_path}}
+    </output>
+  </step>
+
+  <step n="2" goal="Discover & Load Source Documents (Fresh Context Protocol)">
+    <critical>FRESH CONTEXT PROTOCOL: You MUST operate with zero knowledge of original story creation</critical>
+    <critical>Load all documents independently - do NOT inherit any analysis from create-story</critical>
+
+    <action>Confirm: Validator has no prior knowledge of original story creation</action>
+    <action>Load all source documents independently using discover_inputs protocol</action>
+
+    <invoke-protocol name="discover_inputs" />
+
+    <action>Load {project_context} for coding standards (if exists)</action>
+
+    <!-- Additional context beyond create-story -->
+    <action>Load SWISS-MINIMALIST.md or swiss design files (if exists)</action>
+    <action>Load UX design specification files (if exists)</action>
+    <action>Load code review findings from previous stories (if exists) for common issues</action>
+
+    <output>✅ **Source Documents Loaded (Fresh Context)**
+
+      **Documents Loaded:**
+      - Epic {{epic_num}} context
+      - Architecture documentation
+      - Previous stories in epic (for learnings)
+      - Design specifications
+      - Project context
+
+      **Fresh Context Confirmed:** Validator operating independently with zero prior knowledge
+    </output>
+  </step>
+
+  <step n="3" goal="Exhaustive Re-Analysis">
+    <critical>EXHAUSTIVE SYSTEMATIC ANALYSIS - Apply 10-point quality gate checklist</critical>
+    <critical>Use Advanced Elicitation for deep analysis from multiple perspectives</critical>
+
+    <action>Apply systematic Story Quality Rubric checklist:</action>
+
+    <action>For EACH of the 10 checkpoints, analyze thoroughly:
+      1. **ACs Implementable**: Are all ACs implementable? (no vague requirements)
+      2. **Task Mapping**: Do tasks map correctly to ACs? (every AC has corresponding tasks)
+      3. **Dev Notes Comprehensive**: Are dev notes comprehensive? (architecture, patterns, constraints)
+      4. **Previous Learnings**: Are previous story learnings referenced and applied?
+      5. **Architecture Alignment**: Is architecture alignment verified? (matches architecture.md)
+      6. **Anti-patterns**: Are anti-patterns documented? (what NOT to do)
+      7. **Testing Strategy**: Is testing strategy clear? (how to verify)
+      8. **File Structure**: Does file structure match project conventions?
+      9. **TypeScript/Types**: Are TypeScript/types properly specified?
+      10. **Accessibility**: Are accessibility requirements included? (if applicable)
+    </action>
+
+    <action>For EACH Acceptance Criterion:
+      - Read AC requirement
+      - Check if it's implementable (specific, measurable, testable)
+      - Verify corresponding tasks exist
+      - Check if dev notes provide implementation guidance
+      - Determine: EXCELLENT, GOOD, NEEDS_IMPROVEMENT, or MISSING
+    </action>
+
+    <action>For EACH Task/Subtask:
+      - Read task description
+      - Verify it maps to an AC
+      - Check if implementation guidance is clear
+      - Verify file structure matches project conventions
+      - Determine: EXCELLENT, GOOD, NEEDS_IMPROVEMENT, or MISSING
+    </action>
+
+    <action>Analyze Dev Notes section:
+      - Check architecture patterns referenced
+      - Verify previous story learnings applied
+      - Check if anti-patterns documented
+      - Verify testing strategy clarity
+      - Check TypeScript/types specifications
+    </action>
+
+    <action>Cross-reference with source documents:
+      - Compare story requirements with epic requirements
+      - Verify architecture alignment
+      - Check if previous story patterns are applied
+      - Verify design constraints (Swiss Minimalist, etc.)
+    </action>
+
+    <action>Use Web-Browsing to verify technical references:
+      - Check latest library versions mentioned
+      - Verify API documentation references
+      - Validate technical specifications
+    </action>
+
+    <action>Identify gaps, improvements, and missing context</action>
+    <action>Categorize each finding by severity: CRITICAL, MEDIUM, or LOW</action>
+
+    <output>✅ **Exhaustive Analysis Complete**
+
+      **Analysis Method:** Systematic 10-point quality gate checklist
+      **Source Documents Analyzed:** {{document_count}}
+      **Findings Identified:** {{findings_count}} ({{critical_count}} Critical, {{medium_count}} Medium, {{low_count}} Low)
+    </output>
+  </step>
+
+  <step n="4" goal="Generate Findings & Score">
+    <action>Calculate quality score using 5 dimensions (0-2 points each = 0-10 total):</action>
+
+    <action>Score Completeness dimension (0-2):
+      - 0: Critical gaps, cannot proceed
+      - 1: Some gaps, needs improvement
+      - 2: Excellent, no gaps found
+    </action>
+
+    <action>Score Clarity dimension (0-2):
+      - 0: Unclear instructions, ambiguous
+      - 1: Mostly clear, some ambiguity
+      - 2: Clear instructions, unambiguous
+    </action>
+
+    <action>Score Actionability dimension (0-2):
+      - 0: Developer needs clarification
+      - 1: Mostly actionable, minor gaps
+      - 2: Developer can implement without clarification
+    </action>
+
+    <action>Score Accuracy dimension (0-2):
+      - 0: Technical details incorrect, references invalid
+      - 1: Mostly accurate, minor errors
+      - 2: Technical details correct, references valid
+    </action>
+
+    <action>Score Context Depth dimension (0-2):
+      - 0: Previous learnings not applied, architecture misaligned
+      - 1: Some learnings applied, partial alignment
+      - 2: Previous learnings applied, architecture aligned
+    </action>
+
+    <action>Calculate total quality score: {{completeness_score}} + {{clarity_score}} + {{actionability_score}} + {{accuracy_score}} + {{context_score}} = {{original_score}}/10</action>
+
+    <action>Prepare Validator Scorecard with:
+      - Findings breakdown (Critical/Medium/Low counts)
+      - Quality score by dimension
+      - Competitive stats
+      - Educational insights (why improvements were missed)
+    </action>
+
+    <check if="{{findings_count}} == 0 AND {{original_score}} >= 9">
+      <action>Set {{status}} = "clean_bill_of_health"</action>
+      <action>Prepare "Clean Bill of Health" scorecard variant</action>
+    </check>
+
+    <check if="{{findings_count}} > 0">
+      <action>Set {{status}} = "improved"</action>
+      <action>Prepare standard scorecard with findings</action>
+    </check>
+
+    <output>✅ **Quality Score Generated**
+
+      **Original Score:** {{original_score}}/10
+      - Completeness: {{completeness_score}}/2
+      - Clarity: {{clarity_score}}/2
+      - Actionability: {{actionability_score}}/2
+      - Accuracy: {{accuracy_score}}/2
+      - Context Depth: {{context_score}}/2
+
+      **Findings:** {{findings_count}} total ({{critical_count}} Critical, {{medium_count}} Medium, {{low_count}} Low)
+      **Status:** {{status}}
+    </output>
+  </step>
+
+  <step n="5" goal="Present Findings & Get Approval">
+    <critical>HIGHLY INTERACTIVE - User controls what gets applied</critical>
+
+    <action>Present Validator Scorecard with competitive framing</action>
+
+    <check if="{{status}} == 'clean_bill_of_health'">
+      <output>🎯 **Validator Scorecard**
+
+        Story passed all quality checks! ✅
+
+        **Quality Score:** {{original_score}}/10
+        **Improvements Found:** 0
+
+        Validator confirms story quality - excellent work by original creator!
+
+        **All systematic checks passed:**
+        - ✓ All ACs implementable
+        - ✓ Tasks map correctly to ACs
+        - ✓ Dev notes comprehensive
+        - ✓ Previous learnings applied
+        - ✓ Architecture alignment verified
+        - ✓ Testing strategy clear
+        - ✓ File structure matches conventions
+        - ✓ TypeScript/types properly specified
+        - ✓ Accessibility requirements included (if applicable)
+
+        Story is ready for dev-story workflow.
+      </output>
+      <action>Set {{improvements_applied}} = 0</action>
+      <action>Set {{accepted_count}} = 0</action>
+      <action>Set {{rejected_count}} = 0</action>
+      <action>Set {{modified_count}} = 0</action>
+      <goto step="7" />
+    </check>
+
+    <check if="{{status}} == 'improved'">
+      <output>🎯 **Validator Scorecard**
+
+        Found {{findings_count}} improvements:
+        - 🔴 Critical ({{critical_count}}): {{critical_summary}}
+        - 🟡 Medium ({{medium_count}}): {{medium_summary}}
+        - 🟢 Low ({{low_count}}): {{low_summary}}
+
+        **Original creator missed these because:**
+        {{#each missed_reasons}}
+        - {{this}}
+        {{/each}}
+
+        **Quality Score:** {{original_score}}/10
+      </output>
+
+      <action>Present detailed findings list with severity, location, description, reasoning, and suggested improvement</action>
+
+      <output>**Detailed Findings:**
+
+        {{#each findings}}
+        ### Finding {{@index}}: {{severity}} - {{title}}
+
+        **Location:** {{location}} ({{file_path}}:{{line_number}})
+
+        **Description:** {{description}}
+
+        **Reasoning:** {{reasoning}}
+
+        **Suggested Improvement:** {{suggestion}}
+
+        ---
+        {{/each}}
+      </output>
+
+      <ask>**What would you like to do with these findings?**
+
+        [A] Accept all improvements
+        [S] Select improvements individually
+        [R] Reject all improvements
+        [M] Modify specific improvements
+        [E] Advanced Elicitation (deep dive into findings)
+        [P] Party Mode (multi-agent discussion)
+        [C] Continue with selected improvements
+
+        Choose option:</ask>
+
+      <check if="user chooses 'A'">
+        <action>Accept all {{findings_count}} improvements</action>
+        <action>Set {{accepted_count}} = {{findings_count}}</action>
+        <action>Set {{rejected_count}} = 0</action>
+        <action>Set {{modified_count}} = 0</action>
+        <action>Set {{improvements_applied}} = {{findings_count}}</action>
+        <goto step="6" />
+      </check>
+
+      <check if="user chooses 'S'">
+        <action>Present findings one by one for individual selection</action>
+        <action>For each finding, ask: Accept [A], Reject [R], Modify [M], Skip [S]</action>
+        <action>Track accepted/rejected/modified counts</action>
+        <action>Set {{improvements_applied}} = {{accepted_count}} + {{modified_count}}</action>
+        <goto step="6" />
+      </check>
+
+      <check if="user chooses 'R'">
+        <action>Reject all improvements</action>
+        <action>Set {{accepted_count}} = 0</action>
+        <action>Set {{rejected_count}} = {{findings_count}}</action>
+        <action>Set {{modified_count}} = 0</action>
+        <action>Set {{improvements_applied}} = 0</action>
+        <action>Note: Still generate validation report showing zero improvements applied</action>
+        <goto step="7" />
+      </check>
+
+      <check if="user chooses 'M'">
+        <action>Present findings for modification</action>
+        <action>Allow user to edit suggested improvements</action>
+        <action>Track modified improvements</action>
+        <action>Set {{improvements_applied}} = {{modified_count}}</action>
+        <goto step="6" />
+      </check>
+
+      <check if="user chooses 'E'">
+        <invoke-task path="{advancedElicitationTask}" />
+        <action>Return to findings presentation after Advanced Elicitation</action>
+        <goto step="5" />
+      </check>
+
+      <check if="user chooses 'P'">
+        <invoke-workflow path="{partyModeWorkflow}" />
+        <action>Return to findings presentation after Party Mode</action>
+        <goto step="5" />
+      </check>
+
+      <check if="user chooses 'C'">
+        <action>Proceed with selected improvements</action>
+        <goto step="6" />
+      </check>
+    </check>
+  </step>
+
+  <step n="6" goal="Apply Improvements">
+    <action>Apply all accepted and modified improvements to story file</action>
+
+    <action>For EACH accepted/modified finding:
+      1. Locate target section in story file
+      2. Apply improvement (add content, fix error, enhance description)
+      3. Update relevant sections (Dev Notes, Tasks, ACs, etc.)
+      4. Track change in change log
+    </action>
+
+    <action>Update story File List if new files referenced</action>
+    <action>Update Dev Agent Record with validation improvements applied</action>
+    <action>Add Change Log entry: "Validation improvements applied - {{improvements_applied}} improvements (Date: {{date}})"</action>
+
+    <action>Recalculate quality score after improvements:
+      - Re-score all 5 dimensions
+      - Calculate new total score
+      - Calculate improvement delta
+    </action>
+
+    <action>Set {{final_score}} = new quality score</action>
+    <action>Set {{improvement_delta}} = {{final_score}} - {{original_score}}</action>
+
+    <action>Save updated story file</action>
+
+    <output>✅ **Improvements Applied**
+
+      **Improvements Applied:** {{improvements_applied}}
+      **Quality Score:** {{original_score}}/10 → {{final_score}}/10 (+{{improvement_delta}})
+      **Story File Updated:** {{story_path}}
+    </output>
+  </step>
+
+  <step n="7" goal="Generate Validation Report">
+    <action>Load validation report template: {installed_path}/validation-report-template.md</action>
+    <action>Create validation report file: {{validation_report}}</action>
+
+    <action>Populate report with all validation data:
+      - Story metadata (key, title, date)
+      - Quality scores (before/after)
+      - Findings breakdown
+      - Validator scorecard
+      - User decisions (accepted/rejected/modified)
+      - Competitive stats
+      - Educational insights
+    </action>
+
+    <action>Set report frontmatter:
+      - story_key: {{story_key}}
+      - validation_date: {{date}}
+      - validator_model: {{validator_model}}
+      - original_score: {{original_score}}
+      - final_score: {{final_score}}
+      - improvements_found: {{findings_count}}
+      - improvements_applied: {{improvements_applied}}
+      - status: {{status}}
+    </action>
+
+    <action>Generate report sections:
+      1. Executive Summary
+      2. Validator Scorecard
+      3. Quality Score Breakdown (table)
+      4. Detailed Findings
+      5. User Decisions
+      6. Validator Notes (methodology, patterns, recommendations)
+      7. Competitive Stats
+      8. Change Log
+    </action>
+
+    <action>Save validation report to {{validation_report}}</action>
+
+    <output>✅ **Validation Report Generated**
+
+      **Report File:** {{validation_report}}
+      **Quality Improvement:** {{original_score}}/10 → {{final_score}}/10 (+{{improvement_delta}})
+      **Improvements Applied:** {{improvements_applied}}/{{findings_count}}
+
+      {{#if improvements_applied > 0}}
+      **Validator Success:** Found {{findings_count}} improvements the original creator missed, improving story quality by {{improvement_delta}} points!
+      {{else}}
+      **Validator Success:** Confirmed story quality - thorough validation provides confidence that story is ready for development.
+      {{/if}}
+    </output>
+
+    <output>**🎯 Validation Complete!**
+
+      **Story:** {{story_key}}
+      **Status:** {{story_status}} (unchanged - validation doesn't change story status)
+      **Quality Score:** {{original_score}}/10 → {{final_score}}/10
+      **Report:** {{validation_report}}
+
+      **Next Steps:**
+      1. Review the validation report
+      2. Verify improvements applied correctly
+      3. Run `dev-story` when ready to implement
+    </output>
+  </step>
+
+</workflow>
+

@@ -352,10 +352,10 @@ export function FileUpload({
         >
           <Box className={`w-full aspect-[4/3] bg-paper ${getZoneBorderStyle()} items-center justify-center p-6`}>
             <Stack gap={2} className="items-center">
-              <Text variant="body" className="text-signal text-center">
+              <Text variant="body" className="text-signal">
                 {uploadError?.message || 'Upload failed'}
               </Text>
-              <Text variant="caption" className="text-ink-muted text-center">
+              <Text variant="caption" className="text-ink-muted">
                 Click to try again
               </Text>
             </Stack>
@@ -404,12 +404,12 @@ export function FileUpload({
                 📁
               </Text>
               
-              <Text variant="body" className="text-ink text-center">
+              <Text variant="body" className="text-ink">
                 {getInstructionText()}
               </Text>
               
               {uploadState === 'idle' && (
-                <Text variant="caption" className="text-ink-muted text-center">
+                <Text variant="caption" className="text-ink-muted">
                   or click to browse
                 </Text>
               )}

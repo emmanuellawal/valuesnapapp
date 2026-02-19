@@ -184,13 +184,28 @@ async def identify_item_from_image(base64_image: str) -> ItemIdentity:
         )
 
 
+# Default suggestions for AI identification failures
+DEFAULT_SUGGESTIONS = [
+    "Try a clearer photo with better lighting",
+    "Include brand name or model number in frame",
+    "Position item against a plain background",
+]
+
+
 class AIIdentificationError(Exception):
     """Custom exception for AI identification failures."""
     
-    def __init__(self, code: str, message: str, original_error: Exception = None):
+    def __init__(
+        self, 
+        code: str, 
+        message: str, 
+        original_error: Exception = None,
+        suggestions: list[str] = None,
+    ):
         self.code = code
         self.message = message
         self.original_error = original_error
+        self.suggestions = suggestions or DEFAULT_SUGGESTIONS
         super().__init__(message)
 
 

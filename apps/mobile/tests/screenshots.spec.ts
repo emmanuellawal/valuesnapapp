@@ -69,6 +69,42 @@ test.describe('App Screenshots', () => {
         fullPage: true,
       });
     });
+
+    // Confidence level validation tests (Story 2.10)
+    test('web - Confidence HIGH', async ({ page }) => {
+      await page.goto('/appraisal?confidence=HIGH&pricesAnalyzed=25&fairMarketValue=249&brand=Canon&model=AE-1');
+      await waitForAppReady(page);
+      await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+
+      await page.screenshot({
+        path: path.join(screenshotsDir, 'web-confidence-high.png'),
+        fullPage: true,
+      });
+    });
+
+    test('web - Confidence MEDIUM', async ({ page }) => {
+      await page.goto('/appraisal?confidence=MEDIUM&pricesAnalyzed=12&fairMarketValue=145&brand=Anglepoise&model=Type%2075');
+      await waitForAppReady(page);
+      await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+
+      await page.screenshot({
+        path: path.join(screenshotsDir, 'web-confidence-medium.png'),
+        fullPage: true,
+      });
+    });
+
+    test('web - Confidence LOW', async ({ page }) => {
+      await page.goto('/appraisal?confidence=LOW&pricesAnalyzed=3&fairMarketValue=55&brand=Unknown&model=Vintage%20botanical');
+      await waitForAppReady(page);
+      await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+      // Wait for LOW confidence warning to appear
+      await page.getByText('Limited market data').waitFor({ timeout: 5000 });
+
+      await page.screenshot({
+        path: path.join(screenshotsDir, 'web-confidence-low.png'),
+        fullPage: true,
+      });
+    });
   });
 
   test.describe('Mobile view (small viewport)', () => {
@@ -122,6 +158,42 @@ test.describe('App Screenshots', () => {
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'mobile-settings.png'),
+        fullPage: true,
+      });
+    });
+
+    // Confidence level validation tests (Story 2.10)
+    test('mobile - Confidence HIGH', async ({ page }) => {
+      await page.goto('/appraisal?confidence=HIGH&pricesAnalyzed=25&fairMarketValue=249&brand=Canon&model=AE-1');
+      await waitForAppReady(page);
+      await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+
+      await page.screenshot({
+        path: path.join(screenshotsDir, 'mobile-confidence-high.png'),
+        fullPage: true,
+      });
+    });
+
+    test('mobile - Confidence MEDIUM', async ({ page }) => {
+      await page.goto('/appraisal?confidence=MEDIUM&pricesAnalyzed=12&fairMarketValue=145&brand=Anglepoise&model=Type%2075');
+      await waitForAppReady(page);
+      await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+
+      await page.screenshot({
+        path: path.join(screenshotsDir, 'mobile-confidence-medium.png'),
+        fullPage: true,
+      });
+    });
+
+    test('mobile - Confidence LOW', async ({ page }) => {
+      await page.goto('/appraisal?confidence=LOW&pricesAnalyzed=3&fairMarketValue=55&brand=Unknown&model=Vintage%20botanical');
+      await waitForAppReady(page);
+      await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+      // Wait for LOW confidence warning to appear
+      await page.getByText('Limited market data').waitFor({ timeout: 5000 });
+
+      await page.screenshot({
+        path: path.join(screenshotsDir, 'mobile-confidence-low.png'),
         fullPage: true,
       });
     });

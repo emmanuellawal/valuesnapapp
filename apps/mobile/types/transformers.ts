@@ -49,6 +49,7 @@ interface RawMarketData {
   fair_market_value?: number;
   mean?: number;
   std_dev?: number;
+  avg_days_to_sell?: number;
   confidence: string;
   message?: string;
 }
@@ -174,6 +175,7 @@ export function transformMarketData(raw: RawMarketData): MarketData {
     fairMarketValue: raw.fair_market_value,
     mean: raw.mean,
     stdDev: raw.std_dev,
+    avgDaysToSell: raw.avg_days_to_sell,
     confidence: parseConfidence(raw.confidence),
     message: raw.message,
   };

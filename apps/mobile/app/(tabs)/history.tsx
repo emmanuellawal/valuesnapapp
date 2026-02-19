@@ -37,12 +37,61 @@ const MOCK_HISTORY: HistoryGridItem[] = [
       fairMarketValue: 120,
       mean: 115,
       stdDev: 28,
+      avgDaysToSell: 5,
       confidence: 'HIGH',
     }),
   },
   {
     id: '3',
     ...MOCK_SONY_HEADPHONES,
+  },
+  // MEDIUM confidence item for testing
+  {
+    id: '4',
+    itemDetails: createMockItemDetails({
+      itemType: 'desk lamp',
+      brand: 'Anglepoise',
+      model: 'Type 75',
+      visualCondition: 'used_good',
+      conditionDetails: 'Minor scratches on base',
+      categoryHint: 'Lighting',
+      searchKeywords: ['Anglepoise lamp', 'desk lamp'],
+    }),
+    marketData: createMockMarketData({
+      keywords: 'Anglepoise Type 75 lamp',
+      totalFound: 12,
+      pricesAnalyzed: 12,
+      priceRange: { min: 85, max: 220 },
+      fairMarketValue: 145,
+      mean: 142,
+      stdDev: 48,
+      avgDaysToSell: 14,
+      confidence: 'MEDIUM',
+    }),
+  },
+  // LOW confidence item for testing
+  {
+    id: '5',
+    itemDetails: createMockItemDetails({
+      itemType: 'art print',
+      brand: 'Unknown',
+      model: 'Vintage botanical',
+      visualCondition: 'used_excellent',
+      conditionDetails: 'No damage, slight yellowing',
+      categoryHint: 'Art',
+      searchKeywords: ['vintage botanical print', 'art print'],
+    }),
+    marketData: createMockMarketData({
+      keywords: 'vintage botanical art print',
+      totalFound: 3,
+      pricesAnalyzed: 3,
+      priceRange: { min: 25, max: 90 },
+      fairMarketValue: 55,
+      mean: 52,
+      stdDev: 28,
+      avgDaysToSell: 38,
+      confidence: 'LOW',
+    }),
   },
 ];
 

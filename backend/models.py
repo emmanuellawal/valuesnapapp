@@ -1,6 +1,6 @@
 # backend/models.py
 from pydantic import BaseModel, Field, field_validator
-from typing import List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 
 class Identifiers(BaseModel):
@@ -12,6 +12,21 @@ class Identifiers(BaseModel):
 
 # Type alias for AI identification confidence levels
 AIConfidenceLevel = Literal["HIGH", "MEDIUM", "LOW"]
+
+# Type alias for Market confidence levels (Story 2-5)
+MarketConfidenceLevel = Literal["HIGH", "MEDIUM", "LOW"]
+
+
+class ConfidenceFactorsModel(BaseModel):
+    """
+    Breakdown of factors that influenced the market confidence calculation.
+    (Story 2-5: Confidence Calculation Service)
+    """
+    sample_size: int = Field(description="Number of comparable items analyzed")
+    variance_pct: float = Field(description="Price variance as percentage")
+    ai_confidence: str = Field(description="AI identification confidence level")
+    data_source: str = Field(description="Data source: 'primary' or 'fallback'")
+    data_source_penalty: bool = Field(default=False, description="True if fallback search was used")
 
 
 class ItemIdentity(BaseModel):

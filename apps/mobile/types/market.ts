@@ -97,6 +97,9 @@ export interface MarketData {
   /** Standard deviation of prices */
   stdDev?: number;
 
+  /** Average days to sell (market velocity indicator) */
+  avgDaysToSell?: number;
+
   /** Confidence level based on sample size */
   confidence: ConfidenceLevel;
 

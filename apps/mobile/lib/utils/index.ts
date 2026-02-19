@@ -14,3 +14,8 @@ export {
   type ImageQualityIssueType,
   type ImageQualityResult,
 } from './image-validation';
+
+export {
+  buildEbaySearchUrl,
+  buildEbaySoldSearchUrl,
+} from './ebay-search';

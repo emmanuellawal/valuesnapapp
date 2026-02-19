@@ -1,7 +1,7 @@
 import logging
 from typing import List, Optional, Sequence, Union
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 logger = logging.getLogger(__name__)
@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "sqlite:///valuesnap.db"
 
+    # Supabase
+    supabase_url: Optional[str] = None
+    supabase_service_key: Optional[str] = None
+
     # OpenAI
     openai_api_key: Optional[str] = None
     openai_model: str = "gpt-4o-mini"
@@ -52,6 +56,16 @@ class Settings(BaseSettings):
     ebay_prod_cert_id: Optional[str] = None
     ebay_prod_dev_id: Optional[str] = None
 
+    # eBay Cache
+    ebay_cache_ttl_hours: int = 6  # Default 6 hours
+
+    @field_validator('ebay_cache_ttl_hours')
+    @classmethod
+    def validate_cache_ttl(cls, v: int) -> int:
+        if v < 1 or v > 24:
+            raise ValueError("ebay_cache_ttl_hours must be between 1 and 24")
+        return v
+
     # Logging
     log_level: str = "INFO"
 
@@ -65,7 +79,10 @@ class Settings(BaseSettings):
     dom_cap_days: int = 90
 
     class Config:
-        env_file = ".env"
+        # Look for .env in the backend directory (relative to this config file)
+        import os
+        _config_dir = os.path.dirname(os.path.abspath(__file__))
+        env_file = os.path.join(_config_dir, ".env")
 
 
 def parse_origins(origins: Union[str, Sequence[str], None]) -> List[str]:
