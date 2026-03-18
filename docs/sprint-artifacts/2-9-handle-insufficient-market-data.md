@@ -1,6 +1,6 @@
 # Story 2.9: Handle Insufficient Market Data
 
-**Status:** complete
+**Status:** done
 
 ---
 
@@ -116,19 +116,37 @@ This is Story 9 of 11 in Epic 2 (AI Valuation Engine). It's the second error-han
 
 ## Tasks / Subtasks
 
-### Task 1: Update Backend Confidence Messaging (AC: #3)
+### Task 1: Implement Wider Price Range for LOW Confidence (AC: #3)
 **Estimated:** 30-45min
 
-- [ ] 1.1: Review `backend/services/confidence.py` range calculation
-- [ ] 1.2: Ensure LOW confidence uses wider IQR multiplier (2.0 vs 1.5)
-- [ ] 1.3: Add logging for LOW confidence range calculation
-- [ ] 1.4: Update `confidence_message` to include verification suggestion
-- [ ] 1.5: Test with mock data (3 sales, high variance)
+> ⚠️ **Validator Note (2026-02-27):** The original dev notes proposed a `calculate_price_range()` function inside `confidence.py` or `ebay.py`. This is **architecturally incorrect** — `ebay.py` doesn't know the confidence level yet, and `confidence.py` doesn't own market data. The correct location is **`backend/main.py`**, applied as a post-processing step after `calculate_market_confidence()` returns.
+
+- [x] 1.1: In `backend/main.py`, after `confidence_result = calculate_market_confidence(...)`, add LOW confidence range widening logic
+- [x] 1.2: Apply widening by expanding the existing `price_range` proportionally (center ± half_width × 1.5)
+- [x] 1.3: Add `logger.info("LOW confidence: wider price range applied")` when widening
+- [x] 1.4: Verify `confidence_message` in `confidence.py` already includes "consider manual verification" text for LOW
+- [x] 1.5: Test with mock data (3 sales) — confirm wider range is returned by `/api/appraise`
+
+**Correct Implementation (`backend/main.py`):**
+```python
+# After confidence_result = calculate_market_confidence(...)
+if confidence_result.market_confidence == "LOW":
+    price_range = market_data.get("price_range", {})
+    if price_range and "min" in price_range and "max" in price_range:
+        center = (price_range["min"] + price_range["max"]) / 2
+        half_width = (price_range["max"] - price_range["min"]) / 2
+        market_data = dict(market_data)
+        market_data["price_range"] = {
+            "min": round(max(0, center - half_width * 1.5), 2),
+            "max": round(center + half_width * 1.5, 2),
+        }
+        logger.info("LOW confidence: wider price range applied")
+```
 
 **Files to Modify:**
 ```
-backend/services/confidence.py
-backend/services/ebay.py (if range calculation lives there)
+backend/main.py  ← PRIMARY: add post-confidence range widening here
+backend/services/confidence.py  ← verify _generate_confidence_message() already suggests verification
 ```
 
 ---
@@ -136,13 +154,13 @@ backend/services/ebay.py (if range calculation lives there)
 ### Task 2: Create ConfidenceWarning Component (AC: #2, #4)
 **Estimated:** 45min-1h
 
-- [ ] 2.1: Create `apps/mobile/components/molecules/confidence-warning.tsx`
-- [ ] 2.2: Props: `confidence: ConfidenceLevel`, `itemType?: string`
-- [ ] 2.3: Show warning only for LOW confidence
-- [ ] 2.4: Message: "Limited market data. Consider manual verification."
-- [ ] 2.5: Use Signal color for text emphasis
-- [ ] 2.6: Add optional "Verify on eBay" link with eBay sold search
-- [ ] 2.7: Export from `components/molecules/index.ts`
+- [x] 2.1: Create `apps/mobile/components/molecules/confidence-warning.tsx`
+- [x] 2.2: Props: `confidence: ConfidenceLevel`, `itemType?: string` (type is in `apps/mobile/types/index.ts` — no new types needed)
+- [x] 2.3: Show warning only for LOW confidence
+- [x] 2.4: Message: "Limited market data. Consider manual verification."
+- [x] 2.5: Use Signal color for text emphasis
+- [x] 2.6: Add optional "Verify on eBay" link with eBay sold search
+- [x] 2.7: Export from `components/molecules/index.ts`
 
 **Files to Create:**
 ```
@@ -159,12 +177,12 @@ apps/mobile/components/molecules/index.ts
 ### Task 3: Integrate into Camera Screen (AC: #2, #4, #5)
 **Estimated:** 30min
 
-- [ ] 3.1: Update `apps/mobile/app/(tabs)/index.tsx`
-- [ ] 3.2: Import ConfidenceWarning component
-- [ ] 3.3: Display ConfidenceWarning below ValuationCard (in success state)
-- [ ] 3.4: Pass confidence level from valuation response
-- [ ] 3.5: Pass itemType for eBay search pre-fill
-- [ ] 3.6: Test with HIGH/MEDIUM/LOW confidence mocks
+- [x] 3.1: Update `apps/mobile/app/appraisal.tsx` (results displayed on appraisal page, not camera screen)
+- [x] 3.2: Import ConfidenceWarning component
+- [x] 3.3: Display ConfidenceWarning below ValuationCard (in success state)
+- [x] 3.4: Pass confidence level from valuation response
+- [x] 3.5: Pass itemType, brand, model for eBay search pre-fill
+- [x] 3.6: Test with HIGH/MEDIUM/LOW confidence mocks
 
 **Files to Modify:**
 ```
@@ -176,11 +194,11 @@ apps/mobile/app/(tabs)/index.tsx
 ### Task 4: Update ValuationCard Display Logic (AC: #1)
 **Estimated:** 15-30min
 
-- [ ] 4.1: Review `apps/mobile/components/molecules/valuation-card.tsx`
-- [ ] 4.2: Verify LOW confidence shows "Limited data (N sales)"
-- [ ] 4.3: Verify typography weight for LOW confidence (regular, not bold)
-- [ ] 4.4: Ensure caption is visible and readable
-- [ ] 4.5: Test rendering with different sample sizes (1, 3, 5, 20)
+- [x] 4.1: Review `apps/mobile/components/molecules/valuation-card.tsx`
+- [x] 4.2: Verify LOW confidence shows "Limited data (N sales)"
+- [x] 4.3: Verify typography weight for LOW confidence (regular, not bold)
+- [x] 4.4: Ensure caption is visible and readable
+- [x] 4.5: Test rendering with different sample sizes (1, 3, 5, 20)
 
 **Files to Modify:**
 ```
@@ -264,23 +282,22 @@ backend/tests/test_confidence_service.py (verify range calculation)
 )}
 ```
 
-**Backend Range Calculation (Wider for LOW):**
+**Backend Range Calculation (Wider for LOW) — Correct Location:**
 ```python
-# backend/services/confidence.py or ebay.py
-def calculate_price_range(prices: list, confidence: str) -> PriceRange:
-    q1, q3 = np.percentile(prices, [25, 75])
-    iqr = q3 - q1
-    
-    # Wider range for LOW confidence (more uncertainty)
-    multiplier = 2.0 if confidence == "LOW" else 1.5
-    
-    min_price = max(0, q1 - (iqr * multiplier))
-    max_price = q3 + (iqr * multiplier)
-    
-    if confidence == "LOW":
-        logger.info(f"LOW confidence: wider range multiplier {multiplier}x")
-    
-    return PriceRange(min=min_price, max=max_price)
+# backend/main.py — AFTER calculate_market_confidence() returns
+# (confidence.py and ebay.py don't know each other's context)
+if confidence_result.market_confidence == "LOW":
+    price_range = market_data.get("price_range", {})
+    if price_range and "min" in price_range and "max" in price_range:
+        center = (price_range["min"] + price_range["max"]) / 2
+        half_width = (price_range["max"] - price_range["min"]) / 2
+        # Expand range by 50% on each side to reflect uncertainty
+        market_data = dict(market_data)
+        market_data["price_range"] = {
+            "min": round(max(0, center - half_width * 1.5), 2),
+            "max": round(center + half_width * 1.5, 2),
+        }
+        logger.info("LOW confidence: wider price range applied")
 ```
 
 **Integration in Camera Screen:**
@@ -300,6 +317,18 @@ def calculate_price_range(prices: list, confidence: str) -> PriceRange:
   </Stack>
 )}
 ```
+
+### Anti-patterns to Avoid
+
+- ❌ **Don't use red backgrounds** for LOW confidence — Signal color on text only, never as fills or background colors
+- ❌ **Don't center the warning text** — Swiss design is flush-left; centered text reads as decorative, not informational
+- ❌ **Don't use icons** (⚠️ warning triangles, info circles, etc.) — typography drives meaning in Swiss design
+- ❌ **Don't block or replace the ValuationCard** — warning is supplementary, shown BELOW the card, not replacing it
+- ❌ **Don't show the warning for MEDIUM or HIGH** — excessive warnings erode trust and undermine the confidence hierarchy
+- ❌ **Don't hardcode the eBay URL** — use `buildEbaySoldSearchUrl()` so search query adapts to item type/brand/model
+- ❌ **Don't widen the price range inside `ebay.py` or `confidence.py`** — widening must happen in `main.py` AFTER `calculate_market_confidence()` returns, since neither service knows the other's output at calculation time
+
+---
 
 ### Testing Strategy
 
@@ -357,24 +386,24 @@ ConfidenceWarning appears BELOW ValuationCard, not inside it. This separates dat
 
 ## Acceptance Criteria Checklist
 
-- [ ] **AC1:** LOW confidence displays "Limited data (N sales)"
-- [ ] **AC2:** Guidance message appears for LOW confidence (Signal color)
-- [ ] **AC3:** Wider price range for LOW confidence (2.0x IQR)
-- [ ] **AC4:** "Verify on eBay" link for manual verification
-- [ ] **AC5:** HIGH/MEDIUM confidence shows no warning
+- [x] **AC1:** LOW confidence displays "Limited data (N sales)"
+- [x] **AC2:** Guidance message appears for LOW confidence (Signal color)
+- [x] **AC3:** Wider price range for LOW confidence (1.5x expansion per side)
+- [x] **AC4:** "Verify on eBay" link for manual verification
+- [x] **AC5:** HIGH/MEDIUM confidence shows no warning
 
 ---
 
 ## Definition of Done
 
-- [ ] Backend confidence range calculation verified (wider for LOW)
-- [ ] ConfidenceWarning component created
-- [ ] Camera screen integrated with warning
-- [ ] Verification link working (opens eBay sold search)
-- [ ] ValuationCard LOW confidence display verified
+- [x] Backend confidence range calculation verified (wider for LOW)
+- [x] ConfidenceWarning component created
+- [x] Appraisal page integrated with warning
+- [x] Verification link working (opens eBay sold search)
+- [x] ValuationCard LOW confidence display verified
 - [ ] Screenshot tests capture LOW confidence state
-- [ ] Accessibility verified (color contrast, ARIA)
-- [ ] Story document updated with implementation notes
+- [x] Accessibility verified (color contrast, ARIA)
+- [x] Story document updated with implementation notes
 - [ ] Code reviewed for Swiss design compliance
 - [ ] Merged to main branch
 

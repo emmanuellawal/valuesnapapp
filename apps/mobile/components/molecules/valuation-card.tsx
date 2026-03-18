@@ -135,31 +135,35 @@ export function ValuationCard({
 
   const content = (
     <>
-      {/* AC1: Item photo displayed prominently */}
+      {/* AC1: Item photo — museum-style mat framing per Swiss design philosophy */}
       {imageUri ? (
-        <Image
-          source={{ uri: imageUri }}
-          className="aspect-square w-full"
-          accessibilityLabel={`Photo of ${title}`}
-          resizeMode="cover"
-        />
+        <Box className="p-3 bg-paper">
+          <Image
+            source={{ uri: imageUri }}
+            className="aspect-square w-full"
+            accessibilityLabel={`Photo of ${title}`}
+            resizeMode="cover"
+          />
+        </Box>
       ) : (
-        <Box className="aspect-square bg-divider" accessibilityLabel="Item photo placeholder" />
+        <Box className="aspect-square bg-divider/20 items-center justify-center" accessibilityLabel="Item photo placeholder">
+          <Text variant="h1" className="text-ink-muted/30">+</Text>
+        </Box>
       )}
 
-      <Stack gap={1} className="p-3">
-        {/* AC2: Item name shown using h3 typography (20px, bold) */}
+      <Stack gap={1} className="p-4">
+        {/* AC2: Item name — h3 typography (20px, semibold) */}
         <Text variant="h3" numberOfLines={2} className="font-semibold">
           {title}
         </Text>
         
-        {/* AC3: Price displayed prominently - h1 (32px) for better card proportion */}
-        {/* AC4: Bold for HIGH confidence, regular for MEDIUM/LOW */}
-        <Text variant="h1" className={priceClassName}>{price}</Text>
+        {/* AC3: Price — dramatic Swiss hierarchy */}
+        {/* AC4: Bold for HIGH confidence, regular weight for MEDIUM/LOW */}
+        <Text variant="display" className={`${priceClassName} mt-1`}>{price}</Text>
         
         {/* Price range as secondary info */}
         {priceRange && (
-          <Text variant="caption" className="text-ink-muted">
+          <Text variant="caption" className="text-ink-muted mt-1">
             {priceRange}
           </Text>
         )}
@@ -187,7 +191,7 @@ export function ValuationCard({
         accessibilityRole="button"
         accessibilityLabel={`Open valuation for ${title}`}
         onPress={onPress}
-        className="bg-paper border border-divider active:bg-divider"
+        className="bg-paper border-2 border-ink/10 active:bg-divider/20"
         style={({ pressed }) => ({
           opacity: pressed ? 0.9 : 1,
           transform: [{ scale: pressed ? 0.98 : 1 }],
@@ -198,5 +202,5 @@ export function ValuationCard({
     );
   }
 
-  return <Box className="bg-paper border border-divider">{content}</Box>;
+  return <Box className="bg-paper border-2 border-ink/10">{content}</Box>;
 }

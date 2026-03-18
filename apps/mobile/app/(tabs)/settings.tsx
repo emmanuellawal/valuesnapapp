@@ -1,13 +1,12 @@
 import React from 'react';
-import { ScrollView, Alert } from 'react-native';
 
-import { Box, Stack, Text, SwissPressable } from '@/components/primitives';
+import { Box, Stack, Text, SwissPressable, ScreenContainer } from '@/components/primitives';
 
 /**
  * SettingsRow - Swiss Minimalist Design
  * 
- * Flush-left layout with value pushed right via ml-auto
- * No justify-between centering - maintains asymmetric tension
+ * Flush-left layout with value and chevron pushed right.
+ * Touch target >= 48px per WCAG 2.1 AA.
  */
 function SettingsRow({
   label,
@@ -17,90 +16,104 @@ function SettingsRow({
 }: {
   label: string;
   value: string;
-  onPress: () => void;
+  onPress?: () => void;
   accessibilityLabel: string;
 }) {
   return (
     <SwissPressable
       accessibilityLabel={accessibilityLabel}
-      onPress={onPress}
-      className="py-3 bg-paper border-b border-divider"
+      onPress={onPress ?? (() => {})}
+      className="py-4 bg-paper border-b border-divider"
     >
       <Stack direction="horizontal" gap={4}>
         <Text variant="body">{label}</Text>
-        <Text variant="caption" className="text-ink-light ml-auto">
-          {value}
-        </Text>
+        <Stack direction="horizontal" gap={2} className="ml-auto items-center">
+          <Text variant="body-sm" className="text-ink-muted">
+            {value}
+          </Text>
+          <Text variant="body" className="text-ink-muted">
+            ›
+          </Text>
+        </Stack>
       </Stack>
     </SwissPressable>
   );
 }
 
 /**
- * Settings Screen - Swiss Minimalist Design
- * 
- * Applies Swiss design PATTERNS matching Camera screen (Story 0.9):
- * - Asymmetric layout (flush-left, heavy right margin)
- * - Typography as primary visual element
- * - Active negative space with offset dividers
- * - No centered content
- * 
- * @see Story 0.10: Polish History and Settings Tabs
- * @see docs/SWISS-MINIMALIST.md
+ * Settings Screen — Swiss Minimalist Design
  */
 export default function SettingsScreen() {
   return (
-    <ScrollView className="flex-1 bg-paper">
-      {/* Balanced padding for mobile screens - consistent with Camera and History tabs */}
-      <Box className="px-6 pt-12 pb-8">
-        {/* Warm, personalized heading */}
-        <Text variant="h1">Your account</Text>
-        
-        {/* Friendly guidance */}
-        <Text variant="body" className="text-ink-light mt-2">
-          Manage your preferences
+    <ScreenContainer>
+      {/* Header */}
+      <Text variant="caption" className="text-ink-muted uppercase tracking-wide">
+        Settings
+      </Text>
+      <Text variant="display" className="text-ink mt-2">
+        Your account
+      </Text>
+
+      {/* Account section */}
+      <Box className="mt-12">
+        <Text variant="caption" className="text-ink-muted uppercase tracking-wide mb-4">
+          Account
         </Text>
-
-        {/* Full-width divider for mobile balance */}
-        <Box className="h-px bg-divider mt-6" />
-
-        <Stack gap={2} className="mt-6">
-          {/* Section heading - h2 for clear hierarchy */}
-          <Text variant="h2" className="mb-2">Account</Text>
-          <SettingsRow
-            label="Plan"
-            value="Free"
-            accessibilityLabel="View plan"
-            onPress={() => Alert.alert('Plan', 'Account features will be added in a later epic.')}
-          />
-          <SettingsRow
-            label="Email"
-            value="Not signed in"
-            accessibilityLabel="View account email"
-            onPress={() => Alert.alert('Account', 'Authentication will be implemented in Epic 4.')}
-          />
-        </Stack>
-
-        {/* Full-width divider for mobile balance */}
-        <Box className="h-px bg-divider mt-6" />
-
-        <Stack gap={2} className="mt-6 mb-8">
-          {/* Section heading - h2 for clear hierarchy */}
-          <Text variant="h2" className="mb-2">Preferences</Text>
-          <SettingsRow
-            label="Theme"
-            value="System"
-            accessibilityLabel="View theme preference"
-            onPress={() => Alert.alert('Theme', 'This app currently follows system light/dark mode on web.')}
-          />
-          <SettingsRow
-            label="Notifications"
-            value="Off"
-            accessibilityLabel="View notifications preference"
-            onPress={() => Alert.alert('Notifications', 'Preferences will be implemented in a later story.')}
-          />
-        </Stack>
+        <SettingsRow
+          label="Plan"
+          value="Free"
+          accessibilityLabel="View plan details"
+        />
+        <SettingsRow
+          label="Email"
+          value="Not signed in"
+          accessibilityLabel="View account email"
+        />
       </Box>
-    </ScrollView>
+
+      {/* Preferences section */}
+      <Box className="mt-8">
+        <Text variant="caption" className="text-ink-muted uppercase tracking-wide mb-4">
+          Preferences
+        </Text>
+        <SettingsRow
+          label="Theme"
+          value="System"
+          accessibilityLabel="Change theme preference"
+        />
+        <SettingsRow
+          label="Notifications"
+          value="Off"
+          accessibilityLabel="Change notifications preference"
+        />
+        <SettingsRow
+          label="Currency"
+          value="USD"
+          accessibilityLabel="Change currency"
+        />
+      </Box>
+
+      {/* About section */}
+      <Box className="mt-8">
+        <Text variant="caption" className="text-ink-muted uppercase tracking-wide mb-4">
+          About
+        </Text>
+        <SettingsRow
+          label="Version"
+          value="1.0.0"
+          accessibilityLabel="App version"
+        />
+        <SettingsRow
+          label="Privacy Policy"
+          value=""
+          accessibilityLabel="View privacy policy"
+        />
+        <SettingsRow
+          label="Terms of Service"
+          value=""
+          accessibilityLabel="View terms of service"
+        />
+      </Box>
+    </ScreenContainer>
   );
 }

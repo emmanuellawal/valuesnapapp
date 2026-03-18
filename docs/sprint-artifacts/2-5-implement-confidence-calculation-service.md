@@ -22,7 +22,7 @@ With AI identification (Story 2-2) and eBay market data (Story 2-4) complete, we
 - ✅ AI identification returns `ai_identification_confidence` field (Story 2-2)
 - ✅ eBay market data includes `data_source`, `limited_data`, `variance_pct`, `prices_analyzed` (Story 2-4)
 - ✅ **Confidence service already implemented** (`backend/services/confidence.py`)
-- ✅ **Integrated into valuation endpoint** (`/api/v1/valuations` in main.py)
+- ✅ **Integrated into valuation endpoint** (`/api/appraise` in main.py)
 - ✅ **Comprehensive unit tests exist** (`backend/tests/test_confidence_service.py` - 27 tests)
 - ✅ **Integration tests exist** (`backend/tests/integration/test_confidence_integration.py` - 6 tests)
 
@@ -185,12 +185,12 @@ This is Story 5 of 11 in Epic 2 (AI Valuation Engine). It combines signals from 
 ### AC9: Integration with Valuation Endpoint ✅ (Already Implemented)
 
 **Given** a valuation request is processed
-**When** the `/api/v1/valuations` endpoint runs
+**When** the `/api/appraise` endpoint runs
 **Then** confidence calculation is called with market_data and ai_confidence
 **And** confidence result is included in response under `confidence` key
 **And** confidence dict includes all fields from ConfidenceResult
 
-**Implementation:** See `/api/v1/valuations` endpoint in main.py (lines 69-79)
+**Implementation:** See `/api/appraise` endpoint in main.py (lines ~97-109)
 
 **Test Coverage:** `test_api_returns_confidence_data`, `test_high_confidence_end_to_end`, `test_low_confidence_ai_only_end_to_end`, `test_medium_confidence_with_fallback`
 
@@ -284,27 +284,26 @@ This is Story 5 of 11 in Epic 2 (AI Valuation Engine). It combines signals from 
 
 #### API Response Format (NFR-I1)
 ```python
-# Confidence section in /api/v1/valuations response
+# Confidence section in /api/appraise response (actual shape, main.py lines ~97-109)
 {
-  "success": true,
-  "data": {
-    "item_identity": {...},
-    "market_data": {...},
-    "confidence": {
-      "market_confidence": "HIGH" | "MEDIUM" | "LOW",
-      "confidence_factors": {
-        "sample_size": 47,
-        "variance_pct": 18.5,
-        "ai_confidence": "HIGH",
-        "data_source": "primary",
-        "data_source_penalty": false
-      },
-      "ai_only_flag": false,
-      "confidence_message": "Strong confidence based on 47 comparable sales..."
-    }
+  "identity": {...},
+  "valuation": {...},
+  "confidence": {
+    "market_confidence": "HIGH" | "MEDIUM" | "LOW",
+    "confidence_factors": {
+      "sample_size": 47,
+      "variance_pct": 18.5,
+      "ai_confidence": "HIGH",
+      "data_source": "primary",
+      "data_source_penalty": false
+    },
+    "ai_only_flag": false,
+    "confidence_message": "Strong confidence based on 47 comparable sales..."
   }
 }
 ```
+
+_Note: response is a flat dict — no `success` wrapper, no `data` nesting. Keys are `identity`, `valuation`, `confidence` (not `item_identity` / `market_data`)._
 
 #### Error Handling Patterns (NFR-R2)
 - **Graceful Degradation:** Invalid config falls back to defaults with warning
@@ -365,7 +364,7 @@ This is Story 5 of 11 in Epic 2 (AI Valuation Engine). It combines signals from 
 5. End-to-end integration with valuation endpoint
 6. Mock scenario coverage (HIGH_CONFIDENCE, LOW_CONFIDENCE)
 
-**Test Coverage:** Current coverage unknown - run `pytest --cov=backend.services.confidence` to measure
+**Test Coverage:** 98% (`pytest backend/tests/test_confidence_service.py backend/tests/integration/test_confidence_integration.py --cov=backend.services.confidence --cov-report=term-missing`, verified 2026-02-26)
 
 ### Previous Story Intelligence
 
@@ -465,7 +464,7 @@ AI_ONLY_MAX_ITEMS = 3        (hardcoded)
 - [x] AC6: Response includes market_confidence, confidence_factors, ai_only_flag, message ✅
 - [x] AC7: Confidence messages explain level with context ✅
 - [x] AC8: Missing data defaults are conservative (variance→100%, prices→0) ✅
-- [x] AC9: Integrated into /api/v1/valuations endpoint, confidence in response ✅
+- [x] AC9: Integrated into /api/appraise endpoint, confidence in response ✅
 
 ---
 
@@ -560,7 +559,7 @@ GitHub Copilot (Claude Sonnet 4.5)
 
 ## Story Context
 
-Created: 2025-02-08
+Created: 2026-02-08
 Epic: 2 (AI Valuation Engine)
 Story: 5 of 11
 Previous Story: 2-4 (eBay Market Data Integration)

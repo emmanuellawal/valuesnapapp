@@ -84,13 +84,13 @@ export function ProgressIndicator({
   const displayText = isOvertime ? 'Almost done...' : config.text;
   
   return (
-    <Stack gap={2} className="items-center">
-      {/* Stage text - Swiss typography, bold for emphasis */}
+    <Stack gap={2}>
+      {/* Stage text — Swiss typography, bold for emphasis */}
       <Text variant="h3" className="font-bold text-ink">
         {displayText}
       </Text>
       
-      {/* Minimal progress bar - Beneficial violation
+      {/* Minimal progress bar — Beneficial violation
        * 
        * Design rationale:
        * - 1px height maintains Swiss restraint
@@ -120,7 +120,7 @@ export function ProgressIndicator({
         />
       </View>
       
-      {/* Step counter - Swiss typography, muted for secondary info */}
+      {/* Step counter — Swiss typography, muted for secondary info */}
       <Text variant="caption" className="text-ink-muted">
         Step {config.step} of {STAGE_ORDER.length}
       </Text>

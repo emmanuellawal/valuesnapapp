@@ -89,6 +89,7 @@ Output JSON matching the ItemIdentity schema.
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=1, max=4),
     retry=retry_if_exception_type(RETRY_EXCEPTIONS),
+    reraise=True,
     before_sleep=lambda retry_state: logger.warning(
         f"AI API retry attempt {retry_state.attempt_number} after error: {retry_state.outcome.exception()}"
     ),

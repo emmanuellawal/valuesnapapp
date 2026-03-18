@@ -190,7 +190,7 @@ export function ErrorState({
             accessibilityRole="button"
           >
             <Box className="border border-ink p-3 bg-paper">
-              <Text variant="body" className="font-semibold text-ink text-center">
+              <Text variant="body" className="font-semibold text-ink">
                 Try again
               </Text>
             </Box>
@@ -204,7 +204,7 @@ export function ErrorState({
             accessibilityLabel={`${fallbackLink.text} (opens in new tab)`}
             accessibilityRole="link"
           >
-            <Text variant="body" className="text-ink underline text-center">
+            <Text variant="body" className="text-ink underline">
               {fallbackLink.text}
             </Text>
           </SwissPressable>

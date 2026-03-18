@@ -100,6 +100,22 @@ async def appraise_item(request: AnalyzeRequest):
         ai_confidence=identity.ai_identification_confidence,
     )
     
+    # Step 3.5: Widen price range for LOW confidence (Story 2-9, AC3)
+    # LOW confidence = fewer data points = more uncertainty → wider range
+    # Applied here because only main.py has both market_data and confidence_result
+    if confidence_result.market_confidence == "LOW":
+        price_range = market_data.get("price_range", {})
+        if price_range and "min" in price_range and "max" in price_range:
+            center = (price_range["min"] + price_range["max"]) / 2
+            half_width = (price_range["max"] - price_range["min"]) / 2
+            # Expand range by 50% on each side to reflect uncertainty
+            market_data = dict(market_data)
+            market_data["price_range"] = {
+                "min": round(max(0, center - half_width * 1.5), 2),
+                "max": round(center + half_width * 1.5, 2),
+            }
+            logger.info("LOW confidence: wider price range applied")
+    
     # Step 4: Combine and Return
     return {
         "identity": identity.model_dump(),

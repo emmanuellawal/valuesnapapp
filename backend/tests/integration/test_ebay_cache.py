@@ -9,12 +9,16 @@ from backend.models import ItemIdentity
 
 
 @pytest.mark.asyncio
+@patch('backend.services.ebay.settings')
 @patch('backend.services.ebay.write_cache')
 @patch('backend.services.ebay.read_cache')
 @patch('backend.services.ebay.search_sold_listings')
-async def test_cache_miss_calls_api(mock_search, mock_read, mock_write):
+async def test_cache_miss_calls_api(mock_search, mock_read, mock_write, mock_settings):
     """Cache miss triggers API call and caches result."""
-    # Setup mocks
+    # Setup mocks - must disable mock mode and enable cache
+    mock_settings.use_mock = False
+    mock_settings.cache_enabled = True
+    mock_settings.ebay_cache_ttl_hours = 24
     mock_read.return_value = None  # Cache miss
     mock_search.return_value = {"price_range": {"min": 100, "max": 200}}
     mock_write.return_value = True
@@ -38,12 +42,15 @@ async def test_cache_miss_calls_api(mock_search, mock_read, mock_write):
 
 
 @pytest.mark.asyncio
+@patch('backend.services.ebay.settings')
 @patch('backend.services.ebay.write_cache')
 @patch('backend.services.ebay.read_cache')
 @patch('backend.services.ebay.search_sold_listings')
-async def test_cache_hit_skips_api(mock_search, mock_read, mock_write):
+async def test_cache_hit_skips_api(mock_search, mock_read, mock_write, mock_settings):
     """Cache hit returns cached data without API call."""
-    # Setup mocks
+    # Setup mocks - must disable mock mode and enable cache
+    mock_settings.use_mock = False
+    mock_settings.cache_enabled = True
     cached_data = {"price_range": {"min": 2000, "max": 3000}, "cached": True}
     mock_read.return_value = cached_data
     
@@ -123,10 +130,15 @@ async def test_mock_mode_bypasses_cache(mock_settings, mock_search):
 
 
 @pytest.mark.asyncio
+@patch('backend.services.ebay.settings')
 @patch('backend.services.ebay.read_cache')
 @patch('backend.services.ebay.search_sold_listings')
-async def test_cache_different_items_different_keys(mock_search, mock_read):
+async def test_cache_different_items_different_keys(mock_search, mock_read, mock_settings):
     """Different items use different cache keys."""
+    # Setup mocks - must disable mock mode and enable cache
+    mock_settings.use_mock = False
+    mock_settings.cache_enabled = True
+    mock_settings.ebay_cache_ttl_hours = 24
     mock_read.return_value = None
     mock_search.return_value = {"data": "test"}
     

@@ -9,12 +9,15 @@
 
 /**
  * Confidence level for market data accuracy.
- * Based on sample size and data quality.
+ * Based on sample size, price variance, and AI confidence.
  *
- * - HIGH: 10+ listings found, reliable pricing
- * - MEDIUM: Not currently used by backend
- * - LOW: 1-4 listings found, less reliable
- * - NONE: No listings found
+ * Backend (`calculate_market_confidence()`) returns HIGH, MEDIUM, or LOW.
+ * Frontend adds NONE for error/no-data states.
+ *
+ * - HIGH: ≥20 sales, <25% variance, AI=HIGH, primary source
+ * - MEDIUM: 5-19 sales, <40% variance (or fallback source with penalty)
+ * - LOW: <5 sales OR >40% variance OR AI=LOW
+ * - NONE: Frontend-only — no market data available (error/no_data status)
  */
 export type ConfidenceLevel = 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE';
 

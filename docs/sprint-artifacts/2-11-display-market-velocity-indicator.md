@@ -1,6 +1,6 @@
 # Story 2.11: Display Market Velocity Indicator
 
-**Status:** complete
+**Status:** done
 
 ---
 
@@ -16,210 +16,306 @@
 
 ### Why This Story Matters
 
-A fair price only helps the user if they also know how long they'll wait for a sale. A $249 camera that sells in 3 days is a very different proposition from a $55 art print that sits for 6 weeks. Market velocity completes the valuation picture.
+Price alone is incomplete. A $249 camera that sells in 3 days is a very different proposition from a $55 art print that sits for 6 weeks. Velocity completes the valuation picture and closes out Epic 2.
 
-**Current Gap:**
-- ✅ Price estimate displayed (Story 2.6)
-- ✅ Confidence level shown (Story 2.6, 2.10)
-- ❌ No indication of how quickly item sells
-- ❌ No `avgDaysToSell` field in backend or frontend types
+**Current State:**
+- ✅ Backend mock: `avg_days_to_sell` calculated via triangular distribution (3–45 days, seeded by keywords hash) — all success scenarios, NO data scenarios omit it
+- ✅ Frontend type: `avgDaysToSell?: number` in `MarketData` interface
+- ✅ Frontend transformer: `avgDaysToSell: raw.avg_days_to_sell` in `transformMarketData()`
+- ✅ Mock factory: `createMockMarketData()` defaults to `avgDaysToSell: 7` for success status
+- ✅ ValuationCard: `getVelocityCaption()` implemented, rendering below sample size caption
+- ✅ History tab: mock items have realistic values (5, 14, 38 days)
+- ❌ Appraisal page: does NOT accept `avgDaysToSell` URL param — cannot test velocity-absent via screenshot
+- ❌ No dedicated velocity Playwright screenshot tests
 
-**What This Story Delivers:**
-- `avg_days_to_sell` field added to mock eBay service response
-- `avgDaysToSell` field added to `MarketData` TypeScript type
-- Velocity label derived from days value:
-  - ≤7 days → `"Sells in ~N days"`
-  - 8–30 days → `"Sells in ~N days"`
-  - >30 days → `"Slow mover"`
-  - null / absent → no velocity shown
-- Velocity caption shown in `ValuationCard` below the sample size caption
-
-### Velocity Label Logic
-
-| `avgDaysToSell` | Display Text        |
-|-----------------|---------------------|
-| 1–7             | "Sells in ~N days"  |
-| 8–30            | "Sells in ~N days"  |
-| >30             | "Slow mover"        |
-| null / absent   | (nothing shown)     |
+**Delivers:** Add `avgDaysToSell` URL param to appraisal page + 4 velocity screenshot tests (present/absent × web/mobile). Closes Epic 2.
 
 ### Epic Context
 
-This is Story 11 of 11 in Epic 2 (AI Valuation Engine). Completing it closes out Epic 2.
+Story 11 of 11 in Epic 2 (AI Valuation Engine). After this story, Epic 2 is done. Epic 3 (History & Persistence) begins.
 
 ---
 
 ## Acceptance Criteria
 
-### AC1: Backend Mock Returns `avg_days_to_sell`
+### AC1: Velocity Caption Correct (Validation)
 
-**Given** the mock eBay service
-**When** `search_sold_listings()` returns a `success` response
-**Then** the response includes an `avg_days_to_sell` integer field
-**And** the value is deterministic (seeded by keywords hash, same as prices)
-**And** the value is absent (null or omitted) for `no_data` / `no_prices` responses
-
----
-
-### AC2: Frontend Type Includes `avgDaysToSell`
-
-**Given** the `MarketData` TypeScript interface
-**When** a successful market response is received
-**Then** `avgDaysToSell?: number` is present in the type
-**And** the transformer maps `avg_days_to_sell` → `avgDaysToSell`
-**And** the mock factory `createMockMarketData()` supports an optional `avgDaysToSell` override
-
----
-
-### AC3: ValuationCard Shows Velocity Caption
-
-**Given** a `MarketData` object with `avgDaysToSell` set
+**Given** a `MarketData` object with `avgDaysToSell` set to 14
 **When** `ValuationCard` renders
-**Then** a velocity caption appears below the sample size caption
-**And** the text reads "Sells in ~N days" for ≤30 days
-**And** the text reads "Slow mover" for >30 days
-**And** uses the same `caption` variant and `text-ink-muted` color as adjacent captions
+**Then** caption reads "Sells in ~14 days"
+**And** uses `caption` variant with `text-ink-muted` color
+**And** appears below the sample size caption
+
+**Given** `avgDaysToSell` is 38
+**Then** caption reads "Slow mover"
+
+**Validation:** `getVelocityCaption()` already implemented. Verify via code inspection + screenshot test.
 
 ---
 
-### AC4: Velocity Hidden When Data Absent
+### AC2: Velocity Hidden When Absent (Validation)
 
 **Given** a `MarketData` object where `avgDaysToSell` is undefined or null
 **When** `ValuationCard` renders
 **Then** no velocity caption appears
 **And** layout is not affected (no empty gap)
 
+**Validation:** Null-check already in `getVelocityCaption()`. Verify via "velocity absent" screenshot test. 
+
 ---
 
-### AC5: Screenshot Tests Updated
+### AC3: No Velocity for Non-Success Status (Validation)
 
-**Given** the screenshot test suite
-**When** tests run
-**Then** existing appraisal screenshots now include velocity text
-**And** a dedicated "velocity absent" screenshot confirms graceful hide
+**Given** a `MarketData` object with `status !== 'success'`
+**When** `ValuationCard` renders
+**Then** no velocity caption appears regardless of any `avgDaysToSell` value
+
+**Validation:** Status check already in `getVelocityCaption()`. Existing behavior.
+
+---
+
+### AC4: Appraisal Page Supports `avgDaysToSell` URL Param (Feature)
+
+**Given** the appraisal page at `/appraisal?avgDaysToSell=14`
+**When** rendered
+**Then** `ValuationCard` shows "Sells in ~14 days"
+
+**Given** `/appraisal?avgDaysToSell=0` (zero = explicit absent)
+**Then** no velocity caption shown
+
+**Implementation:** Add `avgDaysToSell?: string` to `useLocalSearchParams` and wire to `createMockMarketData()`.
+- If param is present and `> 0` → use `Number(params.avgDaysToSell)`
+- If param is `"0"` or absent → omit from mock (pass `undefined`) so velocity is hidden
+
+---
+
+### AC5: Screenshot Tests Added for Velocity
+
+**Given** the Playwright screenshot test suite
+**When** tests are executed
+**Then** 4 new velocity tests exist and pass:
+  - `web - Velocity present` (avgDaysToSell=14, asserts "Sells in" text)
+  - `web - Velocity absent` (avgDaysToSell=0, asserts "Sells in" NOT present)
+  - `mobile - Velocity present`
+  - `mobile - Velocity absent`
 
 ---
 
 ## Tasks / Subtasks
 
-### Task 1: Backend — add `avg_days_to_sell` to mock response (AC: #1)
-**Estimated:** 15min
+### Task 1: Add `avgDaysToSell` URL Param to Appraisal Page (AC: #4)
+**Estimated:** 10min
 
-- [ ] 1.1: In `backend/services/mocks/mock_ebay.py` `_summary()`, add `avg_days_to_sell`
-- [ ] 1.2: Derive the value deterministically from the existing RNG seed already used for prices
-- [ ] 1.3: Range: triangular distribution between 3–45 days
-- [ ] 1.4: Round to nearest integer
-- [ ] 1.5: Omit from `no_data` / `no_prices` / `error` branches
-
-**Files:**
-```
-backend/services/mocks/mock_ebay.py
-```
-
----
-
-### Task 2: Frontend types + transformer (AC: #2)
-**Estimated:** 15min
-
-- [ ] 2.1: Add `avgDaysToSell?: number` to `MarketData` interface in `types/market.ts`
-- [ ] 2.2: Add `avg_days_to_sell?: number` to `RawMarketData` in `types/transformers.ts`
-- [ ] 2.3: Map field in `transformMarketData()` transformer
-- [ ] 2.4: Add optional `avgDaysToSell` override to `createMockMarketData()` factory
-- [ ] 2.5: Update mock HISTORY items: set realistic values (canon ~5 days, art print ~38 days)
+- [x] 1.1: Add `avgDaysToSell?: string` to the `useLocalSearchParams` type in `apps/mobile/app/appraisal.tsx`
+- [x] 1.2: In the `createMockMarketData()` call, add:
+  ```typescript
+  avgDaysToSell: params.avgDaysToSell && Number(params.avgDaysToSell) > 0
+    ? Number(params.avgDaysToSell)
+    : undefined,
+  ```
+- [x] 1.3: Verify `/appraisal?avgDaysToSell=14` shows "Sells in ~14 days" in ValuationCard
+- [x] 1.4: Verify `/appraisal?avgDaysToSell=0` shows no velocity caption
 
 **Files:**
 ```
-apps/mobile/types/market.ts
-apps/mobile/types/transformers.ts
-apps/mobile/types/mocks.ts
+apps/mobile/app/appraisal.tsx
 ```
+
+**Key Constraint:** The `createMockMarketData()` factory was updated to use `'avgDaysToSell' in overrides` check instead of `?? 7`, so explicitly passing `undefined` now correctly omits velocity (rather than defaulting to 7). The appraisal page wrapper also has `testID="appraisal-valuation"` for scoped test assertions.
 
 ---
 
-### Task 3: ValuationCard velocity caption (AC: #3, #4)
-**Estimated:** 20min
-
-- [ ] 3.1: Add `getVelocityCaption(market: MarketData): string | null` helper
-- [ ] 3.2: Returns "Sells in ~N days" for `avgDaysToSell` 1–30
-- [ ] 3.3: Returns "Slow mover" for `>30`
-- [ ] 3.4: Returns `null` when `avgDaysToSell` is absent
-- [ ] 3.5: Render caption below `sampleSizeCaption` using `caption` variant + `text-ink-muted`
-- [ ] 3.6: Conditional render — skip when `velocityCaption` is null
-
-**Files:**
-```
-apps/mobile/components/molecules/valuation-card.tsx
-```
-
----
-
-### Task 4: Screenshot tests (AC: #5)
+### Task 2: Add Velocity Screenshot Tests (AC: #5)
 **Estimated:** 15min
 
-- [ ] 4.1: Re-run existing screenshot suite (appraisal screenshots now include velocity)
-- [ ] 4.2: Add one new test: "web - Velocity absent" using `confidence=NONE` (no velocity text)
-- [ ] 4.3: Verify all tests pass
+- [x] 2.1: Add 4 velocity tests to `apps/mobile/tests/screenshots.spec.ts` in the Web section and Mobile section
+- [x] 2.2: "Velocity present": navigate to `/appraisal?confidence=HIGH&pricesAnalyzed=24&fairMarketValue=249&avgDaysToSell=21` and assert "Sells in ~21 days" text visible
+- [x] 2.3: "Velocity absent": navigate to `/appraisal?confidence=HIGH&pricesAnalyzed=24&fairMarketValue=249&avgDaysToSell=0` and assert "Sells in" NOT visible within `appraisal-valuation` testID
+- [x] 2.4: Take screenshots for both (4 total: web + mobile for each)
+- [x] 2.5: Run tests — verify all pass
 
 **Files:**
 ```
 apps/mobile/tests/screenshots.spec.ts
+apps/mobile/screenshots/  ← 4 new PNGs
+```
+
+**Test Template (web section, add after existing confidence LOW test):**
+```typescript
+// Velocity tests (Story 2.11)
+test('web - Velocity present', async ({ page }) => {
+  await page.goto('/appraisal?confidence=HIGH&pricesAnalyzed=24&fairMarketValue=249&brand=Canon&model=AE-1&avgDaysToSell=14');
+  await waitForAppReady(page);
+  await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+  await page.getByText('Sells in').waitFor({ timeout: 5000 });
+  await page.screenshot({
+    path: path.join(screenshotsDir, 'web-velocity-present.png'),
+    fullPage: true,
+  });
+});
+
+test('web - Velocity absent', async ({ page }) => {
+  await page.goto('/appraisal?confidence=HIGH&pricesAnalyzed=24&fairMarketValue=249&brand=Canon&model=AE-1&avgDaysToSell=0');
+  await waitForAppReady(page);
+  await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+  await expect(page.getByText('Sells in')).not.toBeVisible();
+  await page.screenshot({
+    path: path.join(screenshotsDir, 'web-velocity-absent.png'),
+    fullPage: true,
+  });
+});
+```
+Duplicate both tests in the mobile section with `mobile-velocity-present.png` / `mobile-velocity-absent.png`.
+
+---
+
+### Task 3: Run Full Screenshot Suite (AC: #1–5 Validation)
+**Estimated:** 10min
+
+- [x] 3.1: Run `npx playwright test tests/screenshots.spec.ts --reporter=list` (auto-starts server)
+- [x] 3.2: Verify all 18 tests pass (14 existing + 4 new velocity tests)
+- [x] 3.3: Manually inspect `web-velocity-present.png` — confirm "Sells in ~21 days" caption visible
+- [x] 3.4: Manually inspect `web-velocity-absent.png` — confirm no velocity text visible
+- [x] 3.5: Check existing appraisal screenshots — "Sells in ~7 days" now appears (mock default)
+
+**Command:**
+```bash
+cd apps/mobile
+npx playwright test tests/screenshots.spec.ts --reporter=list
 ```
 
 ---
 
 ## Dev Notes
 
-### Backend Approach
+### What's Already Done — Do NOT Re-Implement
 
-The existing mock uses a seeded `random.Random(hash)` for price generation. Reuse the same RNG to generate `avg_days_to_sell` with a triangular distribution:
+| Component | File | Status |
+|-----------|------|--------|
+| Backend `avg_days_to_sell` calculation | `backend/services/mocks/mock_ebay.py` | ✅ Done |
+| `avgDaysToSell?: number` in MarketData | `apps/mobile/types/market.ts` | ✅ Done |
+| `avg_days_to_sell?: number` in RawMarketData | `apps/mobile/types/transformers.ts` | ✅ Done |
+| `avgDaysToSell: raw.avg_days_to_sell` mapping | `apps/mobile/types/transformers.ts` L178 | ✅ Done |
+| `avgDaysToSell: 7` default in mock factory | `apps/mobile/types/mocks.ts` L90 | ✅ Done |
+| `getVelocityCaption()` in ValuationCard | `apps/mobile/components/molecules/valuation-card.tsx` L107–117 | ✅ Done |
+| Velocity rendered in ValuationCard | `apps/mobile/components/molecules/valuation-card.tsx` L166–170 | ✅ Done |
+| History mock items with velocity values | `apps/mobile/app/(tabs)/history.tsx` L40/68/92 | ✅ Done |
 
-```python
-avg_days_to_sell = round(rng.triangular(3, 45, 12))  # mode: 12 days
-```
-
-This ensures:
-- Same keywords → same days (deterministic)
-- Realistic skew toward lower values (most items sell reasonably fast)
-- Fixed variation across test items
-
-### Frontend Velocity Helper
+### Velocity Caption Logic (Already Implemented)
 
 ```typescript
+// From valuation-card.tsx L107–117
 function getVelocityCaption(market: MarketData): string | null {
-  if (market.status !== 'success' || !market.avgDaysToSell) return null;
-  if (market.avgDaysToSell > 30) return 'Slow mover';
+  if (market.status !== 'success' || market.avgDaysToSell == null) {
+    return null;
+  }
+  if (market.avgDaysToSell > 30) {
+    return 'Slow mover';
+  }
   return `Sells in ~${market.avgDaysToSell} days`;
 }
 ```
 
-### Design
+### Backend Velocity Distribution
 
-- Same `caption` typography variant as existing captions
-- `text-ink-muted` color (same as range/sample captions)
-- No icons — typography-only per Swiss design
-- No color differentiation (velocity is informational, not alarmist)
+All success scenarios use seeded triangular distribution:
+```python
+rng = random.Random(int(digest[:8], 16))
+# HIGH confidence: fast sellers
+avg_days = round(rng.triangular(3, 14, 7))
+# LOW confidence: slow sellers
+avg_days = round(rng.triangular(15, 45, 30))
+# MEDIUM/LIMITED: medium velocity
+avg_days = round(rng.triangular(7, 30, 14))
+```
+Same keywords → same days (deterministic). `no_data` / `no_prices` responses omit `avg_days_to_sell`.
+
+### Appraisal Page URL Param Contract
+
+**Current params accepted** (from `useLocalSearchParams`):
+- `imageUri`, `brand`, `model`, `itemType`, `fairMarketValue`, `priceMin`, `priceMax`, `confidence`, `pricesAnalyzed`
+
+**After Task 1:**
+- `avgDaysToSell` added — `"0"` or absent = no velocity; positive number = shows velocity
+
+**appraisal.tsx mock construction pattern:**
+```typescript
+const REPORT_MARKET = createMockMarketData({
+  keywords: `${params.brand || 'Canon'} ${params.model || 'AE-1'}`,
+  totalFound: Number(params.pricesAnalyzed) || 24,
+  pricesAnalyzed: Number(params.pricesAnalyzed) || 24,
+  priceRange: { min: Number(params.priceMin) || 150, max: Number(params.priceMax) || 350 },
+  fairMarketValue: Number(params.fairMarketValue) || 249,
+  mean: Number(params.fairMarketValue) || 262,
+  stdDev: 41,
+  confidence: (params.confidence as ConfidenceLevel) || 'HIGH',
+  // ← add avgDaysToSell here (Task 1)
+});
+```
+
+### Mock Data Defaults for Velocity
+
+- `createMockMarketData()` success defaults: `avgDaysToSell: 7`
+- This means ALL existing appraisal screenshots will now show "Sells in ~7 days" after this story
+- This is expected and correct — not a regression
+
+### Velocity Display Styling
+
+- Typography: `caption` variant
+- Color: `text-ink-muted`
+- Position: below `sampleSizeCaption`, above nothing (last caption in the stack)
+- ❌ No icons — Swiss design typography-only
+- ❌ No color differentiation — velocity is informational, not alarmist
+- ❌ No new components — existing `Text` caption in ValuationCard
+
+### Screenshot Test Placement
+
+Tests should be added in pairs at the end of each describe block:
+- Web section: after `web - Confidence LOW` test (~line 107)
+- Mobile section: after `mobile - Confidence LOW` test (~line 195)
+
+**Total tests after this story: 18** (14 existing + 4 new)
+
+### Previous Story Intelligence
+
+**From Story 2.10 (Confidence messaging validation):**
+- `MOCK_MEDIUM_CONFIDENCE_ITEM` and `MOCK_LOW_CONFIDENCE_ITEM` added to `mocks.ts`
+- Both have `avgDaysToSell` set (from mock factory default of 7) — no changes needed
+- Screenshot test infrastructure confirmed working, Playwright auto-starts on port 8083
+
+**From Story 2.9 (Insufficient market data):**
+- `ConfidenceWarning` renders for LOW confidence below `ValuationCard`
+- Velocity caption renders INSIDE `ValuationCard`, not conflicting with `ConfidenceWarning`
+
+### Anti-patterns to Avoid
+
+- ❌ **Don't change `getVelocityCaption()`** — already correctly implemented
+- ❌ **Don't add `avgDaysToSell` to `no_data` backend responses** — already correctly omitted
+- ❌ **Don't add velocity-specific color** — use `text-ink-muted` same as other captions
+- ❌ **Don't add a "fast/slow" semantic indicator component** — text only per Swiss design
+- ❌ **Don't skip the `avgDaysToSell=0` absent test** — it validates the null-guard in `getVelocityCaption()`
 
 ---
 
 ## Acceptance Criteria Checklist
 
-- [ ] **AC1:** Mock eBay returns `avg_days_to_sell` on success
-- [ ] **AC2:** `avgDaysToSell` in type + transformer + mock factory
-- [ ] **AC3:** ValuationCard shows velocity caption
-- [ ] **AC4:** Velocity hidden gracefully when absent
-- [ ] **AC5:** Screenshots updated and passing
+- [x] **AC1:** Velocity caption correct — "Sells in ~N days" for ≤30, "Slow mover" for >30
+- [x] **AC2:** Velocity hidden when `avgDaysToSell` absent
+- [x] **AC3:** No velocity for non-success status
+- [x] **AC4:** Appraisal page accepts `avgDaysToSell` URL param
+- [x] **AC5:** 4 velocity screenshot tests added and passing
 
 ---
 
 ## Definition of Done
 
-- [ ] Backend mock returns `avg_days_to_sell`
-- [ ] TypeScript types updated and transformer mapped
-- [ ] ValuationCard renders velocity caption
-- [ ] Velocity hidden when data absent (no layout shift)
-- [ ] All screenshot tests passing
-- [ ] TypeScript compiles without errors
-- [ ] Story marked complete
+- [x] `avgDaysToSell` URL param working in appraisal page
+- [x] 4 velocity Playwright tests added
+- [x] All 18 screenshot tests pass (14 existing + 4 new)
+- [x] `web-velocity-present.png` and `web-velocity-absent.png` screenshots correct
+- [x] TypeScript compiles without errors
+- [x] Story marked complete in story file
+- [x] Epic 2 complete — all 11 stories done
 
 ---
 
@@ -227,29 +323,56 @@ function getVelocityCaption(market: MarketData): string | null {
 
 **Depends On:**
 - Story 2.6: ValuationCard component (✅ complete)
-- Story 2.10: Confidence messaging validated (✅ complete)
+- Story 2.10: Confidence messaging validated (✅ complete) — screenshot infrastructure confirmed working
 
 **Blocks:**
-- Epic 2 closure (this is the final Epic 2 story)
-- Epic 3 can begin after this story
+- Epic 2 closure
+- Epic 3: History & Persistence (can begin after this story — `avgDaysToSell` values already in history.tsx mock)
 
 ---
 
 ## Estimated Effort
 
-**Total:** ~1 hour
+**Total:** ~30–40 minutes (most is already done)
 
-- Task 1: 15min (backend mock)
-- Task 2: 15min (types + transformer)
-- Task 3: 20min (ValuationCard caption)
-- Task 4: 15min (screenshots)
+- Task 1: 10min — add URL param to appraisal.tsx (trivial)
+- Task 2: 15min — add 4 screenshot tests
+- Task 3: 10min — run tests, inspect outputs
 
 ---
 
 ## Notes
 
-**Story Type:** Feature — new field through full stack (backend → type → transformer → component).
+**Story Type:** Small feature + validation. Only 2 files need new code: `appraisal.tsx` (1 param) and `screenshots.spec.ts` (4 tests). Everything else is already done.
 
-**Scope discipline:** This story adds exactly one field (`avg_days_to_sell`) and one caption. No new components, no new colors, no new routing. The full implementation fits in 4 focused files.
+**Epic 2 Close-out:** After this story, all 11 Epic 2 stories are complete. Update `epic-2` status in sprint-status.yaml to `done` as part of the DoD.
 
-**After this story:** Epic 2 is complete. All 11 stories done. Move to Epic 3 (History & Persistence).
+**Next Epic:** Epic 3 — History & Persistence. Story 3.1 (Valuations Database Schema) is first.
+
+---
+
+## Dev Agent Record
+
+### Agent Model Used
+
+GitHub Copilot (Claude Sonnet 4.6)
+
+### Completion Notes List
+
+_To be filled during implementation_
+
+### Change Log
+
+_To be filled during implementation_
+
+### File List
+
+**To Modify:**
+- `apps/mobile/app/appraisal.tsx` — Add `avgDaysToSell` URL param
+- `apps/mobile/tests/screenshots.spec.ts` — Add 4 velocity tests
+
+**To Verify (no changes expected):**
+- `apps/mobile/components/molecules/valuation-card.tsx` — `getVelocityCaption()` already correct
+- `apps/mobile/types/market.ts` — `avgDaysToSell` already present
+- `apps/mobile/types/transformers.ts` — Mapping already present
+- `backend/services/mocks/mock_ebay.py` — `avg_days_to_sell` already calculated

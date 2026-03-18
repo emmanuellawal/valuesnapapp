@@ -1,9 +1,8 @@
 import React from 'react';
-import { ScrollView } from 'react-native';
 import { Stack } from 'expo-router';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
-import { Box, Stack as SwissStack, Text } from '@/components/primitives';
+import { Box, Stack as SwissStack, Text, ScreenContainer } from '@/components/primitives';
 import { SwissPressable } from '@/components/primitives';
 import { ValuationCard, ConfidenceWarning } from '@/components/molecules';
 import { createMockItemDetails, createMockMarketData } from '@/types/mocks';
@@ -21,6 +20,7 @@ export default function AppraisalReportScreen() {
     priceMax?: string;
     confidence?: string;
     pricesAnalyzed?: string;
+    avgDaysToSell?: string;
   }>();
 
   // Use params if available, otherwise fall back to mock data
@@ -44,61 +44,79 @@ export default function AppraisalReportScreen() {
     mean: Number(params.fairMarketValue) || 262,
     stdDev: 41,
     confidence: (params.confidence as ConfidenceLevel) || 'HIGH',
+    avgDaysToSell: params.avgDaysToSell && Number(params.avgDaysToSell) > 0
+      ? Number(params.avgDaysToSell)
+      : undefined,
   });
 
   return (
-    <ScrollView className="flex-1 bg-paper">
+    <ScreenContainer>
       <Stack.Screen options={{ title: 'Appraisal', headerShown: false }} />
 
-      <Box className="px-6 pt-12 pb-8">
-        <SwissPressable
-          accessibilityLabel="Go back"
-          onPress={() => router.back()}
-          className="self-start border border-divider bg-paper px-3 py-2"
-        >
-          <Text variant="caption" className="text-ink">
-            Back
-          </Text>
-        </SwissPressable>
-
-        <Text variant="h1">Appraisal report</Text>
-        <Text variant="body" className="text-ink-light mt-2">
-          Market estimate based on recent sales
+      {/* Back — typographic, Swiss-minimal */}
+      <SwissPressable
+        accessibilityLabel="Go back"
+        onPress={() => router.back()}
+        className="self-start py-2 mb-6"
+      >
+        <Text variant="body" className="text-ink-muted">
+          ← Back
         </Text>
+      </SwissPressable>
 
-        <Box className="h-px bg-divider mt-6" />
+      <Text variant="display">Appraisal{'\n'}report</Text>
+      <Text variant="body" className="text-ink-light mt-3">
+        Market estimate based on recent sales
+      </Text>
 
-        <Box className="mt-6 w-56">
-          <ValuationCard 
-            itemDetails={REPORT_ITEM} 
-            marketData={REPORT_MARKET}
-            imageUri={params.imageUri}
-          />
-          
-          {/* LOW confidence warning with verification link */}
-          <ConfidenceWarning
-            confidence={REPORT_MARKET.confidence}
-            itemType={REPORT_ITEM.itemType}
-            brand={REPORT_ITEM.brand}
-            model={REPORT_ITEM.model}
-          />
-        </Box>
+      <Box className="h-px bg-divider mt-8" />
 
-        <Box className="h-px bg-divider mt-8" />
-
-        <SwissStack gap={3} className="mt-6">
-          <Text variant="h2">Summary</Text>
-          <Text variant="caption" className="text-ink-muted">
-            Range: ${REPORT_MARKET.priceRange?.min} – ${REPORT_MARKET.priceRange?.max}
-          </Text>
-          <Text variant="caption" className="text-ink-muted">
-            Listings analyzed: {REPORT_MARKET.pricesAnalyzed}
-          </Text>
-          <Text variant="caption" className="text-ink-muted">
-            Confidence: {REPORT_MARKET.confidence}
-          </Text>
-        </SwissStack>
+      {/* Valuation card — full width */}
+      <Box className="mt-8 w-full" testID="appraisal-valuation">
+        <ValuationCard 
+          itemDetails={REPORT_ITEM} 
+          marketData={REPORT_MARKET}
+          imageUri={params.imageUri}
+        />
+        
+        {/* LOW confidence warning with verification link */}
+        <ConfidenceWarning
+          confidence={REPORT_MARKET.confidence}
+          itemType={REPORT_ITEM.itemType}
+          brand={REPORT_ITEM.brand}
+          model={REPORT_ITEM.model}
+        />
       </Box>
-    </ScrollView>
+
+      <Box className="h-px bg-divider mt-8" />
+
+      {/* Summary — data-dense, Swiss hierarchy */}
+      <SwissStack gap={3} className="mt-8">
+        <Text variant="h2">Summary</Text>
+        
+        <SwissStack gap={3} className="mt-2">
+          <SwissStack direction="horizontal" gap={2} className="border-b border-divider pb-3">
+            <Text variant="caption" className="text-ink-muted uppercase tracking-wide w-28">Range</Text>
+            <Text variant="body" className="font-semibold">
+              ${REPORT_MARKET.priceRange?.min} – ${REPORT_MARKET.priceRange?.max}
+            </Text>
+          </SwissStack>
+          
+          <SwissStack direction="horizontal" gap={2} className="border-b border-divider pb-3">
+            <Text variant="caption" className="text-ink-muted uppercase tracking-wide w-28">Analyzed</Text>
+            <Text variant="body" className="font-semibold">
+              {REPORT_MARKET.pricesAnalyzed} listings
+            </Text>
+          </SwissStack>
+          
+          <SwissStack direction="horizontal" gap={2} className="border-b border-divider pb-3">
+            <Text variant="caption" className="text-ink-muted uppercase tracking-wide w-28">Confidence</Text>
+            <Text variant="body" className="font-semibold">
+              {REPORT_MARKET.confidence}
+            </Text>
+          </SwissStack>
+        </SwissStack>
+      </SwissStack>
+    </ScreenContainer>
   );
 }

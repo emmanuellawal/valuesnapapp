@@ -41,13 +41,13 @@ function ShimmerBox({ className }: { className: string }) {
 
 export function ValuationCardSkeleton() {
   return (
-    <Box className="bg-paper border border-divider">
-      <ShimmerBox className="aspect-square bg-divider" />
+    <Box className="bg-paper border-2 border-ink/10">
+      <ShimmerBox className="aspect-square bg-divider/20" />
 
-      <Stack gap={1} className="p-3">
+      <Stack gap={1} className="p-4">
         <ShimmerBox className="h-5 w-3/4 bg-divider" />
-        <ShimmerBox className="h-7 w-1/2 bg-divider" />
-        <ShimmerBox className="h-3 w-2/3 bg-divider" />
+        <ShimmerBox className="h-10 w-1/2 bg-divider mt-1" />
+        <ShimmerBox className="h-3 w-2/3 bg-divider mt-1" />
       </Stack>
     </Box>
   );

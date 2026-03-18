@@ -26,7 +26,7 @@ test.describe('App Screenshots', () => {
     test('web - Camera', async ({ page }) => {
       await page.goto('/');
       await waitForAppReady(page);
-      await page.getByRole('heading', { name: 'What are you selling?' }).waitFor({ timeout: 15000 });
+      await page.getByText("What are you selling").waitFor({ timeout: 15000 });
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'web-camera.png'),
@@ -38,7 +38,7 @@ test.describe('App Screenshots', () => {
       await page.goto('/');
       await waitForAppReady(page);
       await page.click('text=History');
-      await page.getByRole('heading', { name: 'Your collection' }).waitFor({ timeout: 15000 });
+      await page.getByText('Your collection').waitFor({ timeout: 15000 });
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'web-history.png'),
@@ -50,7 +50,7 @@ test.describe('App Screenshots', () => {
       await page.goto('/');
       await waitForAppReady(page);
       await page.getByRole('button', { name: /^Open valuation for / }).first().click();
-      await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+      await page.getByText('Appraisal').waitFor({ timeout: 15000 });
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'web-appraisal-report.png'),
@@ -62,7 +62,7 @@ test.describe('App Screenshots', () => {
       await page.goto('/');
       await waitForAppReady(page);
       await page.click('text=Settings');
-      await page.getByRole('heading', { name: 'Your account' }).waitFor({ timeout: 15000 });
+      await page.getByText('Your account').waitFor({ timeout: 15000 });
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'web-settings.png'),
@@ -74,7 +74,7 @@ test.describe('App Screenshots', () => {
     test('web - Confidence HIGH', async ({ page }) => {
       await page.goto('/appraisal?confidence=HIGH&pricesAnalyzed=25&fairMarketValue=249&brand=Canon&model=AE-1');
       await waitForAppReady(page);
-      await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+      await page.getByText('Appraisal').waitFor({ timeout: 15000 });
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'web-confidence-high.png'),
@@ -85,7 +85,7 @@ test.describe('App Screenshots', () => {
     test('web - Confidence MEDIUM', async ({ page }) => {
       await page.goto('/appraisal?confidence=MEDIUM&pricesAnalyzed=12&fairMarketValue=145&brand=Anglepoise&model=Type%2075');
       await waitForAppReady(page);
-      await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+      await page.getByText('Appraisal').waitFor({ timeout: 15000 });
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'web-confidence-medium.png'),
@@ -96,12 +96,37 @@ test.describe('App Screenshots', () => {
     test('web - Confidence LOW', async ({ page }) => {
       await page.goto('/appraisal?confidence=LOW&pricesAnalyzed=3&fairMarketValue=55&brand=Unknown&model=Vintage%20botanical');
       await waitForAppReady(page);
-      await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+      await page.getByText('Appraisal').waitFor({ timeout: 15000 });
       // Wait for LOW confidence warning to appear
       await page.getByText('Limited market data').waitFor({ timeout: 5000 });
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'web-confidence-low.png'),
+        fullPage: true,
+      });
+    });
+
+    // Velocity tests (Story 2.11)
+    test('web - Velocity present', async ({ page }) => {
+      await page.goto('/appraisal?confidence=HIGH&pricesAnalyzed=24&fairMarketValue=249&brand=Canon&model=AE-1&avgDaysToSell=21');
+      await waitForAppReady(page);
+      await page.getByText('Appraisal').waitFor({ timeout: 15000 });
+      await page.getByText('Sells in ~21 days').waitFor({ timeout: 5000 });
+
+      await page.screenshot({
+        path: path.join(screenshotsDir, 'web-velocity-present.png'),
+        fullPage: true,
+      });
+    });
+
+    test('web - Velocity absent', async ({ page }) => {
+      await page.goto('/appraisal?confidence=HIGH&pricesAnalyzed=24&fairMarketValue=249&brand=Canon&model=AE-1&avgDaysToSell=0');
+      await waitForAppReady(page);
+      await page.getByText('Appraisal').waitFor({ timeout: 15000 });
+      await expect(page.getByTestId('appraisal-valuation').getByText('Sells in')).not.toBeVisible();
+
+      await page.screenshot({
+        path: path.join(screenshotsDir, 'web-velocity-absent.png'),
         fullPage: true,
       });
     });
@@ -118,7 +143,7 @@ test.describe('App Screenshots', () => {
     test('mobile - Camera', async ({ page }) => {
       await page.goto('/');
       await waitForAppReady(page);
-      await page.getByRole('heading', { name: 'What are you selling?' }).waitFor({ timeout: 15000 });
+      await page.getByText("What are you selling").waitFor({ timeout: 15000 });
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'mobile-camera.png'),
@@ -130,7 +155,7 @@ test.describe('App Screenshots', () => {
       await page.goto('/');
       await waitForAppReady(page);
       await page.click('text=History');
-      await page.getByRole('heading', { name: 'Your collection' }).waitFor({ timeout: 15000 });
+      await page.getByText('Your collection').waitFor({ timeout: 15000 });
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'mobile-history.png'),
@@ -142,7 +167,7 @@ test.describe('App Screenshots', () => {
       await page.goto('/');
       await waitForAppReady(page);
       await page.getByRole('button', { name: /^Open valuation for / }).first().click();
-      await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+      await page.getByText('Appraisal').waitFor({ timeout: 15000 });
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'mobile-appraisal-report.png'),
@@ -154,7 +179,7 @@ test.describe('App Screenshots', () => {
       await page.goto('/');
       await waitForAppReady(page);
       await page.click('text=Settings');
-      await page.getByRole('heading', { name: 'Your account' }).waitFor({ timeout: 15000 });
+      await page.getByText('Your account').waitFor({ timeout: 15000 });
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'mobile-settings.png'),
@@ -166,7 +191,7 @@ test.describe('App Screenshots', () => {
     test('mobile - Confidence HIGH', async ({ page }) => {
       await page.goto('/appraisal?confidence=HIGH&pricesAnalyzed=25&fairMarketValue=249&brand=Canon&model=AE-1');
       await waitForAppReady(page);
-      await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+      await page.getByText('Appraisal').waitFor({ timeout: 15000 });
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'mobile-confidence-high.png'),
@@ -177,7 +202,7 @@ test.describe('App Screenshots', () => {
     test('mobile - Confidence MEDIUM', async ({ page }) => {
       await page.goto('/appraisal?confidence=MEDIUM&pricesAnalyzed=12&fairMarketValue=145&brand=Anglepoise&model=Type%2075');
       await waitForAppReady(page);
-      await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+      await page.getByText('Appraisal').waitFor({ timeout: 15000 });
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'mobile-confidence-medium.png'),
@@ -188,12 +213,37 @@ test.describe('App Screenshots', () => {
     test('mobile - Confidence LOW', async ({ page }) => {
       await page.goto('/appraisal?confidence=LOW&pricesAnalyzed=3&fairMarketValue=55&brand=Unknown&model=Vintage%20botanical');
       await waitForAppReady(page);
-      await page.getByRole('heading', { name: 'Appraisal report' }).waitFor({ timeout: 15000 });
+      await page.getByText('Appraisal').waitFor({ timeout: 15000 });
       // Wait for LOW confidence warning to appear
       await page.getByText('Limited market data').waitFor({ timeout: 5000 });
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'mobile-confidence-low.png'),
+        fullPage: true,
+      });
+    });
+
+    // Velocity tests (Story 2.11)
+    test('mobile - Velocity present', async ({ page }) => {
+      await page.goto('/appraisal?confidence=HIGH&pricesAnalyzed=24&fairMarketValue=249&brand=Canon&model=AE-1&avgDaysToSell=21');
+      await waitForAppReady(page);
+      await page.getByText('Appraisal').waitFor({ timeout: 15000 });
+      await page.getByText('Sells in ~21 days').waitFor({ timeout: 5000 });
+
+      await page.screenshot({
+        path: path.join(screenshotsDir, 'mobile-velocity-present.png'),
+        fullPage: true,
+      });
+    });
+
+    test('mobile - Velocity absent', async ({ page }) => {
+      await page.goto('/appraisal?confidence=HIGH&pricesAnalyzed=24&fairMarketValue=249&brand=Canon&model=AE-1&avgDaysToSell=0');
+      await waitForAppReady(page);
+      await page.getByText('Appraisal').waitFor({ timeout: 15000 });
+      await expect(page.getByTestId('appraisal-valuation').getByText('Sells in')).not.toBeVisible();
+
+      await page.screenshot({
+        path: path.join(screenshotsDir, 'mobile-velocity-absent.png'),
         fullPage: true,
       });
     });

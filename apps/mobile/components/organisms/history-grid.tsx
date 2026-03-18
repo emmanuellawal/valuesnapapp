@@ -14,9 +14,9 @@ export interface HistoryGridProps {
 
 export function HistoryGrid({ items, onItemPress }: HistoryGridProps) {
   return (
-    <Box className="flex-row flex-wrap gap-4">
+    <Box className="flex-row flex-wrap" style={{ gap: 16 }}>
       {items.map((item) => (
-        <Box key={item.id} className="w-44 shrink-0">
+        <Box key={item.id} style={{ width: 'calc(50% - 8px)' as any }}>
           <ValuationCard
             itemDetails={item.itemDetails}
             marketData={item.marketData}

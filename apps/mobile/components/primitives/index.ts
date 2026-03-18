@@ -28,3 +28,6 @@ export type { TextProps, TextVariant } from './text';
 export { SwissPressable } from './swiss-pressable';
 export type { SwissPressableProps } from './swiss-pressable';
 
+export { ScreenContainer } from './screen-container';
+export type { ScreenContainerProps } from './screen-container';
+

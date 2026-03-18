@@ -2,7 +2,7 @@ import React from 'react';
 import { Text as RNText, TextProps as RNTextProps } from 'react-native';
 
 /** Typography variants matching Swiss Minimalist design tokens */
-export type TextVariant = 'display' | 'h1' | 'h2' | 'h3' | 'body' | 'caption';
+export type TextVariant = 'display' | 'h1' | 'h2' | 'h3' | 'body' | 'body-sm' | 'caption';
 
 /**
  * TextProps interface for typography with semantic variants.
@@ -23,6 +23,7 @@ export interface TextProps extends RNTextProps {
  * - h2: 24px, semibold (section headers)
  * - h3: 20px, semibold (card titles)
  * - body: 16px, regular (body text) ← DEFAULT
+ * - body-sm: 14px, regular (secondary text)
  * - caption: 12px, regular (labels)
  */
 const variantClassMap: Record<TextVariant, string> = {
@@ -31,6 +32,7 @@ const variantClassMap: Record<TextVariant, string> = {
   h2: 'text-h2',
   h3: 'text-h3',
   body: 'text-body',
+  'body-sm': 'text-body-sm',
   caption: 'text-caption',
 };
 
@@ -45,6 +47,7 @@ const variantAccessibilityRoleMap: Record<TextVariant, 'header' | 'text'> = {
   h2: 'header',
   h3: 'header',
   body: 'text',
+  'body-sm': 'text',
   caption: 'text',
 };
 
@@ -53,7 +56,7 @@ const variantAccessibilityRoleMap: Record<TextVariant, 'header' | 'text'> = {
  */
 function getValidVariant(variant: string | undefined): TextVariant {
   if (variant === undefined) return 'body';
-  const validVariants: TextVariant[] = ['display', 'h1', 'h2', 'h3', 'body', 'caption'];
+  const validVariants: TextVariant[] = ['display', 'h1', 'h2', 'h3', 'body', 'body-sm', 'caption'];
   return validVariants.includes(variant as TextVariant)
     ? (variant as TextVariant)
     : 'body';

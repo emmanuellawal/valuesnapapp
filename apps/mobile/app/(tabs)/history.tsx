@@ -1,8 +1,7 @@
 import React from 'react';
-import { ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Box, Stack, Text } from '@/components/primitives';
+import { Box, Stack, Text, ScreenContainer } from '@/components/primitives';
 import { HistoryGridSkeleton } from '@/components/molecules';
 import { HistoryGrid, type HistoryGridItem } from '@/components/organisms/history-grid';
 import {
@@ -96,16 +95,9 @@ const MOCK_HISTORY: HistoryGridItem[] = [
 ];
 
 /**
- * History Screen - Swiss Minimalist Design
+ * History Screen — Swiss Minimalist Design
  * 
- * Applies Swiss design PATTERNS matching Camera screen (Story 0.9):
- * - Asymmetric layout (flush-left, heavy right margin)
- * - Typography as primary visual element
- * - Active negative space with offset dividers
- * - No centered content
- * 
- * @see Story 0.10: Polish History and Settings Tabs
- * @see docs/SWISS-MINIMALIST.md
+ * Collection overview with portfolio metrics.
  */
 export default function HistoryScreen() {
   const router = useRouter();
@@ -115,32 +107,34 @@ export default function HistoryScreen() {
   }, 0);
 
   return (
-    <ScrollView className="flex-1 bg-paper">
-      {/* Balanced padding for mobile screens */}
-      <Box className="px-6 pt-12 pb-8">
-        {/* Warm, personalized heading */}
-        <Text variant="h1">Your collection</Text>
-        
-        {/* Encouraging stats */}
-        <Text variant="body" className="text-ink-light mt-2">
-          {itemCount} items valued at ${totalValue.toLocaleString()}
-        </Text>
+    <ScreenContainer>
+      {/* Hero stats */}
+      <Text variant="caption" className="text-ink-muted uppercase tracking-wide">
+        Your collection
+      </Text>
+      <Text variant="display" className="text-ink mt-2">
+        ${totalValue.toLocaleString()}
+      </Text>
+      <Text variant="body" className="text-ink-light mt-2">
+        {itemCount} items valued
+      </Text>
 
-        {/* Full-width divider for mobile balance */}
-        <Box className="h-px bg-divider mt-6" />
-
-        <Stack gap={4} className="mt-6">
-          {/* Section heading - h2 for clear hierarchy */}
-          <Text variant="h2">Recent finds</Text>
-          <Text variant="caption" className="text-ink-muted -mt-2">
-            Tap any item to see details
+      {/* Items section */}
+      <Box className="mt-12">
+        <Stack gap={1} className="mb-6">
+          <Text variant="caption" className="text-ink-muted uppercase tracking-wide">
+            All items
           </Text>
-          <HistoryGrid
-            items={MOCK_HISTORY}
-            onItemPress={(item) => router.push(`/appraisal?id=${item.id}`)}
-          />
+          <Text variant="h2" className="text-ink">
+            Recent valuations
+          </Text>
         </Stack>
+
+        <HistoryGrid
+          items={MOCK_HISTORY}
+          onItemPress={(item) => router.push(`/appraisal?id=${item.id}`)}
+        />
       </Box>
-    </ScrollView>
+    </ScreenContainer>
   );
 }

@@ -16,14 +16,18 @@ module.exports = {
         signal: 'rgb(var(--signal) / <alpha-value>)',
         divider: 'rgb(var(--divider) / <alpha-value>)',
       },
-      // Task 4: Typography scale
+      // Task 4: Typography scale — Swiss International Typographic Style
+      fontFamily: {
+        sans: ['Inter', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
+      },
       fontSize: {
-        display: ['48px', { lineHeight: '1.1', fontWeight: '700' }],
-        h1: ['32px', { lineHeight: '1.2', fontWeight: '700' }],
-        h2: ['24px', { lineHeight: '1.3', fontWeight: '600' }],
+        display: ['48px', { lineHeight: '1.1', fontWeight: '700', letterSpacing: '-0.02em' }],
+        h1: ['32px', { lineHeight: '1.2', fontWeight: '700', letterSpacing: '-0.01em' }],
+        h2: ['24px', { lineHeight: '1.3', fontWeight: '600', letterSpacing: '-0.01em' }],
         h3: ['20px', { lineHeight: '1.4', fontWeight: '600' }],
         body: ['16px', { lineHeight: '1.5', fontWeight: '400' }],
-        caption: ['12px', { lineHeight: '1.4', fontWeight: '400' }],
+        'body-sm': ['14px', { lineHeight: '1.5', fontWeight: '400' }],
+        caption: ['12px', { lineHeight: '1.4', fontWeight: '400', letterSpacing: '0.05em' }],
       },
       // Task 5: Spacing scale (4px base)
       spacing: {

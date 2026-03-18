@@ -80,9 +80,22 @@ class ItemIdentity(BaseModel):
         return v
 
 
+# ~10 MB binary → base64 is ~133% size → 13_400_000 chars max
+_MAX_IMAGE_BASE64_LEN = 13_400_000
+
+
 class AnalyzeRequest(BaseModel):
     """Request body for /api/appraise endpoint"""
     image_base64: str
+
+    @field_validator("image_base64")
+    @classmethod
+    def validate_image_size(cls, v: str) -> str:
+        if len(v) > _MAX_IMAGE_BASE64_LEN:
+            raise ValueError(
+                f"Image too large: {len(v)} chars exceeds {_MAX_IMAGE_BASE64_LEN} char limit (~10 MB)"
+            )
+        return v
 
 
 

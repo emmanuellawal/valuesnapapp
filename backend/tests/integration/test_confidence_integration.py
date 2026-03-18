@@ -193,6 +193,124 @@ class TestConfidenceInApiFlow:
         assert confidence["market_confidence"] in ["MEDIUM", "LOW"]
         assert confidence["confidence_factors"]["data_source_penalty"] is True
 
+    def test_low_confidence_wider_price_range(
+        self, client, mock_ai_high_confidence
+    ):
+        """Story 2-9 AC3: LOW confidence widens price range by 50% each side."""
+        # 3 sales with high variance → LOW confidence
+        mock_low_data = {
+            "status": "success",
+            "keywords": "rare vintage item",
+            "total_found": 3,
+            "prices_analyzed": 3,
+            "outliers_removed": 0,
+            "variance_pct": 45.0,
+            "price_range": {"min": 100.0, "max": 200.0},
+            "fair_market_value": 150.0,
+            "mean": 150.0,
+            "std_dev": 50.0,
+            "data_source": "primary",
+            "limited_data": True,
+        }
+
+        with patch(
+            "backend.main.identify_item_from_image",
+            new_callable=AsyncMock,
+            return_value=mock_ai_high_confidence,
+        ), patch(
+            "backend.main.search_sold_listings",
+            new_callable=AsyncMock,
+            return_value=mock_low_data,
+        ):
+            response = client.post(
+                "/api/appraise",
+                json={"image_base64": "test_image_data"},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Confirm LOW confidence
+        assert data["confidence"]["market_confidence"] == "LOW"
+
+        # Original range: 100–200, center=150, half_width=50
+        # Widened: 150 - 50*1.5 = 75, 150 + 50*1.5 = 225
+        valuation = data["valuation"]
+        assert valuation["price_range"]["min"] == 75.0
+        assert valuation["price_range"]["max"] == 225.0
+
+    def test_high_confidence_no_price_range_widening(
+        self, client, mock_ai_high_confidence, mock_ebay_high_confidence_data
+    ):
+        """Story 2-9 AC5: HIGH confidence does NOT widen price range."""
+        with patch(
+            "backend.main.identify_item_from_image",
+            new_callable=AsyncMock,
+            return_value=mock_ai_high_confidence,
+        ), patch(
+            "backend.main.search_sold_listings",
+            new_callable=AsyncMock,
+            return_value=mock_ebay_high_confidence_data,
+        ):
+            response = client.post(
+                "/api/appraise",
+                json={"image_base64": "test_image_data"},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Confirm HIGH confidence
+        assert data["confidence"]["market_confidence"] == "HIGH"
+
+        # Price range should be unchanged
+        valuation = data["valuation"]
+        assert valuation["price_range"]["min"] == 150.0
+        assert valuation["price_range"]["max"] == 280.0
+
+    def test_low_confidence_wider_range_floor_at_zero(
+        self, client, mock_ai_high_confidence
+    ):
+        """Story 2-9: Widened range minimum cannot go below zero."""
+        mock_cheap_item = {
+            "status": "success",
+            "keywords": "cheap item",
+            "total_found": 3,
+            "prices_analyzed": 3,
+            "outliers_removed": 0,
+            "variance_pct": 60.0,
+            "price_range": {"min": 5.0, "max": 25.0},
+            "fair_market_value": 15.0,
+            "mean": 15.0,
+            "std_dev": 10.0,
+            "data_source": "primary",
+            "limited_data": True,
+        }
+
+        with patch(
+            "backend.main.identify_item_from_image",
+            new_callable=AsyncMock,
+            return_value=mock_ai_high_confidence,
+        ), patch(
+            "backend.main.search_sold_listings",
+            new_callable=AsyncMock,
+            return_value=mock_cheap_item,
+        ):
+            response = client.post(
+                "/api/appraise",
+                json={"image_base64": "test_image_data"},
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["confidence"]["market_confidence"] == "LOW"
+
+        # Original range: 5–25, center=15, half_width=10
+        # Widened: 15 - 10*1.5 = 0, 15 + 10*1.5 = 30
+        valuation = data["valuation"]
+        assert valuation["price_range"]["min"] == 0.0
+        assert valuation["price_range"]["max"] == 30.0
+
 
 class TestConfidenceWithMockMode:
     """Test confidence scenarios using mock mode."""

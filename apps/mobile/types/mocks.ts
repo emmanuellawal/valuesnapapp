@@ -87,7 +87,9 @@ export function createMockMarketData(
       fairMarketValue: overrides?.fairMarketValue ?? 150,
       mean: overrides?.mean ?? 145,
       stdDev: overrides?.stdDev ?? 25,
-      avgDaysToSell: overrides?.avgDaysToSell ?? 7,
+      avgDaysToSell: overrides && 'avgDaysToSell' in overrides
+        ? overrides.avgDaysToSell
+        : 7,
       confidence: overrides?.confidence ?? 'HIGH',
     };
   }
@@ -198,6 +200,36 @@ export const MOCK_SONY_HEADPHONES: { itemDetails: ItemDetails; marketData: Marke
     confidence: 'HIGH',
   }),
 };
+
+/**
+ * Mock: MEDIUM confidence market data scenario.
+ * Moderate sample size with some price variance.
+ * Use for testing MEDIUM confidence display (regular typography, no warning).
+ */
+export const MOCK_MEDIUM_CONFIDENCE_ITEM = createMockMarketData({
+  confidence: 'MEDIUM',
+  totalFound: 12,
+  pricesAnalyzed: 12,
+  fairMarketValue: 145,
+  priceRange: { min: 95, max: 210 },
+  mean: 148,
+  stdDev: 35,
+});
+
+/**
+ * Mock: LOW confidence market data scenario.
+ * Few sales with high uncertainty.
+ * Use for testing LOW confidence display (ConfidenceWarning, Signal color, verify link).
+ */
+export const MOCK_LOW_CONFIDENCE_ITEM = createMockMarketData({
+  confidence: 'LOW',
+  totalFound: 3,
+  pricesAnalyzed: 3,
+  fairMarketValue: 55,
+  priceRange: { min: 30, max: 85 },
+  mean: 57,
+  stdDev: 28,
+});
 
 /**
  * Mock: Unknown item (low confidence)

@@ -274,16 +274,16 @@ export function FileUpload({
 
   /**
    * Get upload zone border style based on state
-   * Swiss Design: ink (default), signal (hover/drag)
+   * Swiss Design: consistent border-2 eliminates layout jump on state change
    */
   const getZoneBorderStyle = () => {
     switch (uploadState) {
       case 'dragging':
         return 'border-2 border-signal';
       case 'error':
-        return 'border border-signal';
+        return 'border-2 border-signal';
       default:
-        return 'border border-ink';
+        return 'border-2 border-ink';
     }
   };
 
@@ -350,9 +350,9 @@ export function FileUpload({
           accessibilityRole="button"
           className="w-full"
         >
-          <Box className={`w-full aspect-[4/3] bg-paper ${getZoneBorderStyle()} items-center justify-center p-6`}>
-            <Stack gap={2} className="items-center">
-              <Text variant="body" className="text-signal">
+          <Box className={`w-full aspect-[5/3] bg-paper ${getZoneBorderStyle()} justify-center items-center p-6`}>
+            <Stack gap={2}>
+              <Text variant="body" className="text-signal font-semibold">
                 {uploadError?.message || 'Upload failed'}
               </Text>
               <Text variant="caption" className="text-ink-muted">
@@ -395,21 +395,21 @@ export function FileUpload({
           className="w-full"
         >
           <Box 
-            className={`w-full aspect-[4/3] bg-paper ${getZoneBorderStyle()} items-center justify-center p-6`}
+            className={`w-full aspect-[5/3] bg-divider/10 ${getZoneBorderStyle()} items-center justify-center p-6`}
             accessibilityLiveRegion="polite"
           >
             <Stack gap={2} className="items-center">
-              {/* Upload icon - simple text representation for Swiss Minimalist */}
-              <Text variant="display" className="text-ink mb-2">
-                📁
+              {/* Geometric arrow — large, centered, commanding */}
+              <Text variant="display" className="text-ink-muted">
+                ↑
               </Text>
               
-              <Text variant="body" className="text-ink">
+              <Text variant="body" className="text-ink font-semibold text-center">
                 {getInstructionText()}
               </Text>
               
               {uploadState === 'idle' && (
-                <Text variant="caption" className="text-ink-muted">
+                <Text variant="caption" className="text-ink-muted text-center">
                   or click to browse
                 </Text>
               )}

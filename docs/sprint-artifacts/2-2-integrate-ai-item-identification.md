@@ -1,6 +1,6 @@
 # Story 2.2: Integrate AI Item Identification
 
-Status: ready-for-dev
+Status: done
 
 ---
 
@@ -55,58 +55,58 @@ Status: ready-for-dev
 
 ### Backend Tasks
 
-- [ ] **Task 1: Enhance AI Service with Retry Logic** (AC: #4)
-  - [ ] 1.1: Add `tenacity` library for retry logic with exponential backoff
+- [x] **Task 1: Enhance AI Service with Retry Logic** (AC: #4)
+  - [x] 1.1: Add `tenacity` library for retry logic with exponential backoff
     - Install: `pip install tenacity`
     - Use `@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=4))` decorator
     - **Async note:** Use `tenacity` with async functions - it supports async natively
     - Also handle 429 rate limit errors with longer backoff
-  - [ ] 1.2: Configure max 2 retries with 1s, 2s delays
-  - [ ] 1.3: Add timeout handling (30s max per request)
-  - [ ] 1.4: Return structured error on final failure
+  - [x] 1.2: Configure max 2 retries with 1s, 2s delays
+  - [x] 1.3: Add timeout handling (30s max per request)
+  - [x] 1.4: Return structured error on final failure
 
-- [ ] **Task 2: Add Description Generation to Prompt** (AC: #5)
-  - [ ] 2.1: Extend `IDENTIFICATION_PROMPT` to include description generation
-  - [ ] 2.2: Add `description` field to `ItemIdentity` model
-  - [ ] 2.3: Update mock service to include descriptions
-  - [ ] 2.4: Validate description quality in tests
+- [x] **Task 2: Add Description Generation to Prompt** (AC: #5)
+  - [x] 2.1: Extend `IDENTIFICATION_PROMPT` to include description generation
+  - [x] 2.2: Add `description` field to `ItemIdentity` model
+  - [x] 2.3: Update mock service to include descriptions
+  - [x] 2.4: Validate description quality in tests
 
-- [ ] **Task 3: Improve Unknown Item Handling** (AC: #2)
-  - [ ] 3.1: Add validation that "unknown" values are acceptable
-  - [ ] 3.2: Ensure `search_keywords` always has at least 1 entry (even for unknown)
-  - [ ] 3.3: Add `ai_identification_confidence` field to ItemIdentity model
-    - [ ] 3.3a: Add to `backend/models.py` - `ai_identification_confidence: str = Field(description="HIGH/MEDIUM/LOW based on AI certainty about identification")`
-    - [ ] 3.3b: Update IDENTIFICATION_PROMPT to output confidence: "Rate your identification confidence: HIGH if brand/model clearly visible, MEDIUM if category clear but specifics uncertain, LOW if mostly guessing"
-    - [ ] 3.3c: Update mock responses to include confidence
+- [x] **Task 3: Improve Unknown Item Handling** (AC: #2)
+  - [x] 3.1: Add validation that "unknown" values are acceptable
+  - [x] 3.2: Ensure `search_keywords` always has at least 1 entry (even for unknown)
+  - [x] 3.3: Add `ai_identification_confidence` field to ItemIdentity model
+    - [x] 3.3a: Add to `backend/models.py` - `ai_identification_confidence: str = Field(description="HIGH/MEDIUM/LOW based on AI certainty about identification")`
+    - [x] 3.3b: Update IDENTIFICATION_PROMPT to output confidence: "Rate your identification confidence: HIGH if brand/model clearly visible, MEDIUM if category clear but specifics uncertain, LOW if mostly guessing"
+    - [x] 3.3c: Update mock responses to include confidence
     - **Note:** This is AI's certainty about identification, NOT market confidence (Story 2.5). Use distinct naming: `ai_identification_confidence` vs `market_confidence`.
-  - [ ] 3.4: Test with intentionally ambiguous images
+  - [x] 3.4: Test with intentionally ambiguous images
 
-- [ ] **Task 4: Create Test Image Suite** (AC: #3)
-  - [ ] 4.1: Collect 10+ test images covering different categories
-  - [ ] 4.2: Create `backend/tests/fixtures/` directory for test images
-  - [ ] 4.3: Add expected results manifest for validation
-  - [ ] 4.4: Implement pytest tests for image identification
-  - [ ] 4.5: Add negative test cases for edge scenarios
+- [x] **Task 4: Create Test Image Suite** (AC: #3)
+  - [x] 4.1: Collect 10+ test images covering different categories
+  - [x] 4.2: Create `backend/tests/fixtures/` directory for test images
+  - [x] 4.3: Add expected results manifest for validation
+  - [x] 4.4: Implement pytest tests for image identification
+  - [x] 4.5: Add negative test cases for edge scenarios
     - Abstract art (should return LOW confidence)
     - Blurry photo (should handle gracefully)
     - Empty room / no product (should return "unknown")
     - Invalid base64 / corrupt image (should return structured error)
 
-- [ ] **Task 5: Integration Tests** (AC: #1, #3)
-  - [ ] 5.1: Create integration test structure and file
-    - [ ] 5.1a: Create `backend/tests/integration/` directory
-    - [ ] 5.1b: Create `backend/tests/integration/__init__.py`
-    - [ ] 5.1c: Create `backend/tests/integration/test_ai_integration.py`
-  - [ ] 5.2: Test mock mode returns valid `ItemIdentity`
-  - [ ] 5.3: Test real API (when `USE_MOCK=false`) against test images
-  - [ ] 5.4: Verify response schema compliance
+- [x] **Task 5: Integration Tests** (AC: #1, #3)
+  - [x] 5.1: Create integration test structure and file
+    - [x] 5.1a: Create `backend/tests/integration/` directory
+    - [x] 5.1b: Create `backend/tests/integration/__init__.py`
+    - [x] 5.1c: Create `backend/tests/integration/test_ai_integration.py`
+  - [x] 5.2: Test mock mode returns valid `ItemIdentity`
+  - [x] 5.3: Test real API (when `USE_MOCK=false`) against test images
+  - [x] 5.4: Verify response schema compliance
 
 ### Documentation Tasks
 
-- [ ] **Task 6: Document AI Service** (AC: all)
-  - [ ] 6.1: Update `backend/README.md` with AI service usage
-  - [ ] 6.2: Document error codes and retry behavior
-  - [ ] 6.3: Add example responses for different scenarios
+- [x] **Task 6: Document AI Service** (AC: all)
+  - [x] 6.1: Update `backend/README.md` with AI service usage
+  - [x] 6.2: Document error codes and retry behavior
+  - [x] 6.3: Add example responses for different scenarios
 
 ---
 
@@ -295,3 +295,23 @@ Claude Opus 4.5 (GitHub Copilot)
 - `backend/tests/integration/__init__.py` - Integration test package
 - `backend/tests/integration/test_ai_integration.py` - 10 integration tests
 - `backend/tests/fixtures/TEST_IMAGES.json` - Test image manifest (14 cases)
+
+---
+
+## Senior Developer Review (AI)
+
+**Date:** 2026-03-18  
+**Reviewer:** Claude Sonnet 4.6  
+**Result:** ✅ Approved with fixes
+
+**Tests:** 113 backend passed, 4 skipped (real API, correct). 18/18 Playwright passed.
+
+**Findings fixed:**
+
+- 🟡 **MEDIUM - Dead code in retry error handler:** `@retry` lacked `reraise=True`. Tenacity raises `RetryError` on exhaustion, making the `except RETRY_EXCEPTIONS` branch unreachable. Added `reraise=True` — the original exception now propagates correctly and error messages are accurate. `backend/services/ai.py`
+- 🟡 **MEDIUM - Missing image size validation (DoS attack surface):** `AnalyzeRequest.image_base64` accepted unbounded input. Added `@field_validator` capping at 13,400,000 chars (~10 MB binary). `backend/models.py`
+
+**Low findings (deferred):**
+
+- 🟢 Pydantic v1 `class Config` in `config.py` — deprecated warning, not blocking
+- 🟢 `_get_client()` re-creates `AsyncOpenAI` per call — module-level singleton would be more efficient

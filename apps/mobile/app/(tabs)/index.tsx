@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ScrollView, Platform, Alert } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { Box, Stack, Text, SwissPressable } from '@/components/primitives';
+import { Box, Stack, Text, SwissPressable, ScreenContainer } from '@/components/primitives';
 import { ValuationCard, ValuationCardSkeleton, ProgressIndicator, ErrorState, type ErrorType } from '@/components/molecules';
 import { CameraCapture, FileUpload, type CapturedPhoto } from '@/components/organisms';
 import { useProgressStages } from '@/lib/hooks';
@@ -23,23 +23,25 @@ const PREVIEW_MARKET = createMockMarketData({
 });
 
 /**
- * Camera Screen - Swiss Minimalist Design with Warmth
+ * Camera Screen — Swiss Minimalist Design
  *
  * Primary tab for capturing item photos.
- * Applies Swiss design patterns:
- * - Asymmetric layout (flush-left, heavy right margin)
+ * Swiss design patterns:
+ * - Flush-left asymmetric layout
  * - Typography as primary visual element
- * - Active negative space with offset dividers
- * 
- * Warmth touches:
- * - Friendly, encouraging microcopy
- * - Subtle visual hierarchy
+ * - Active negative space
+ * - Horizontal rule dividers
  */
 export default function CameraScreen() {
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadKey, setUploadKey] = useState(0);
   const [error, setError] = useState<{ type: ErrorType; message?: string } | null>(null);
+  const [lastResult, setLastResult] = useState<{
+    item: typeof PREVIEW_ITEM;
+    market: typeof PREVIEW_MARKET;
+    imageUri: string;
+  } | null>(null);
   
   // Store the last photo for retry functionality
   const lastPhotoRef = useRef<CapturedPhoto | null>(null);
@@ -63,17 +65,16 @@ export default function CameraScreen() {
     // Store photo for potential retry
     lastPhotoRef.current = photo;
     setError(null);
+    setLastResult(null);
     setIsProcessing(true);
     
     // TODO: In real implementation, send photo to backend for valuation
-    // For now, simulate either success or error based on random chance (for testing)
-    const simulateError = Math.random() < 0.3; // 30% chance of error for demo
+    const simulateError = Math.random() < 0.3;
     
     // Simulating ~6 second API call to show multiple progress stages
     await new Promise(resolve => setTimeout(resolve, 6000));
     
     if (simulateError) {
-      // Simulate AI identification failure
       setIsProcessing(false);
       setError({
         type: 'AI_IDENTIFICATION_FAILED',
@@ -89,109 +90,127 @@ export default function CameraScreen() {
     // Reset FileUpload component by incrementing key
     setUploadKey(prev => prev + 1);
     
-    // Encode valuation data and photo URI in URL params
-    const params = new URLSearchParams({
+    // Store the result inline instead of using Alert
+    setLastResult({
+      item: PREVIEW_ITEM,
+      market: PREVIEW_MARKET,
       imageUri: photo.uri,
-      // In real implementation, these would come from the backend API response
-      brand: PREVIEW_ITEM.brand,
-      model: PREVIEW_ITEM.model,
-      itemType: PREVIEW_ITEM.itemType,
-      fairMarketValue: String(PREVIEW_MARKET.fairMarketValue || 0),
-      priceMin: String(PREVIEW_MARKET.priceRange?.min || 0),
-      priceMax: String(PREVIEW_MARKET.priceRange?.max || 0),
-      confidence: PREVIEW_MARKET.confidence,
-      pricesAnalyzed: String(PREVIEW_MARKET.pricesAnalyzed || 0),
     });
-    
-    // Show success message with option to view report
-    Alert.alert(
-      'Valuation complete!',
-      'Your item has been valued.',
-      [
-        { text: 'View report', onPress: () => router.push(`/appraisal?${params.toString()}`) },
-        { text: 'Value another', style: 'cancel' },
-      ]
-    );
   };
 
-  // Get time-based greeting for warmth
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  /**
+   * Navigate to full appraisal report
+   */
+  const handleViewReport = () => {
+    if (!lastResult) return;
+    const params = new URLSearchParams({
+      imageUri: lastResult.imageUri,
+      brand: lastResult.item.brand,
+      model: lastResult.item.model,
+      itemType: lastResult.item.itemType,
+      fairMarketValue: String(lastResult.market.fairMarketValue || 0),
+      priceMin: String(lastResult.market.priceRange?.min || 0),
+      priceMax: String(lastResult.market.priceRange?.max || 0),
+      confidence: lastResult.market.confidence,
+      pricesAnalyzed: String(lastResult.market.pricesAnalyzed || 0),
+    });
+    router.push(`/appraisal?${params.toString()}`);
+  };
+
+  /**
+   * Dismiss result and value another item
+   */
+  const handleValueAnother = () => {
+    setLastResult(null);
+  };
 
   return (
-    <ScrollView className="flex-1 bg-paper">
-      {/* Balanced padding for mobile screens */}
-      <Box className="px-6 pt-12 pb-8">
-        {/* Warm greeting */}
-        <Text variant="caption" className="text-ink-muted mb-1">
-          {greeting}
-        </Text>
-        <Text variant="h1">What are you selling?</Text>
-        <Text variant="body" className="text-ink-light mt-2">
-          Snap a photo and we'll find its value
-        </Text>
+    <ScreenContainer>
+      {/* Header — dramatic typographic hierarchy */}
+      <Text variant="display">What are you{'\n'}selling?</Text>
+      <Text variant="body" className="text-ink-light mt-3">
+        Snap a photo and we'll find its value
+      </Text>
 
-        {/* Full-width divider for mobile balance */}
-        <Box className="h-px bg-divider mt-6" />
+      <Box className="h-px bg-divider mt-8" />
 
-        {/* Capture/upload - functional implementation */}
-        {/* Constrain width so the capture/upload box isn't oversized */}
-        <Box className="mt-6 w-64 max-w-full">
-          {error ? (
-            <Box className="items-center justify-center">
-              {/* Error state with retry and fallback options */}
-              <ErrorState
-                errorType={error.type}
-                onRetry={handleRetry}
-                fallbackLink={{
-                  text: 'Search eBay manually',
-                  href: buildEbaySearchUrl(),
-                }}
-              />
-            </Box>
-          ) : isProcessing ? (
-            <Box className="items-center justify-center py-8">
-              {/* Multi-stage progress indicator */}
-              <ProgressIndicator
-                stage={stage}
-                stageProgress={stageProgress}
-                isOvertime={isOvertime}
-              />
-              <Box className="mt-6 w-44">
-                <ValuationCardSkeleton />
-              </Box>
-            </Box>
-          ) : Platform.OS === 'web' ? (
-            <FileUpload key={uploadKey} onPhotoCapture={handlePhotoCapture} />
-          ) : (
-            <CameraCapture onPhotoCapture={handlePhotoCapture} />
-          )}
-        </Box>
-
-        {/* Full-width divider */}
-        <Box className="h-px bg-divider mt-8" />
-
-        <Stack gap={4} className="mt-8">
-          <Text variant="h2">Recent valuations</Text>
-          <Text variant="caption" className="text-ink-muted -mt-2">
-            Your latest finds
-          </Text>
-
-          <Stack direction="horizontal" gap={4} className="flex-wrap mt-2">
-            <Box className="w-44 shrink-0">
+      {/* Primary action area — full width for authority */}
+      <Box className="mt-8">
+        {lastResult ? (
+          /* Inline result — Swiss-styled, no native Alert */
+          <Stack gap={4}>
+            <Text variant="h3" className="font-bold">Valuation complete</Text>
+            <Box className="w-full">
               <ValuationCard
-                itemDetails={PREVIEW_ITEM}
-                marketData={PREVIEW_MARKET}
-                onPress={() => router.push('/appraisal?id=preview-1')}
+                itemDetails={lastResult.item}
+                marketData={lastResult.market}
+                imageUri={lastResult.imageUri}
+                onPress={handleViewReport}
               />
             </Box>
-
-            <Box className="w-44 shrink-0" accessibilityLiveRegion="polite" accessibilityLabel="Loading valuation">
+            <Stack direction="horizontal" gap={3}>
+              <SwissPressable
+                accessibilityLabel="View full appraisal report"
+                onPress={handleViewReport}
+                className="border border-ink bg-ink px-4 py-3"
+              >
+                <Text variant="body" className="text-paper font-semibold">View report</Text>
+              </SwissPressable>
+              <SwissPressable
+                accessibilityLabel="Value another item"
+                onPress={handleValueAnother}
+                className="border border-divider bg-paper px-4 py-3"
+              >
+                <Text variant="body" className="text-ink">Value another</Text>
+              </SwissPressable>
+            </Stack>
+          </Stack>
+        ) : error ? (
+          <ErrorState
+            errorType={error.type}
+            onRetry={handleRetry}
+            fallbackLink={{
+              text: 'Search eBay manually',
+              href: buildEbaySearchUrl(),
+            }}
+          />
+        ) : isProcessing ? (
+          <Stack gap={6} className="py-8">
+            <ProgressIndicator
+              stage={stage}
+              stageProgress={stageProgress}
+              isOvertime={isOvertime}
+            />
+            <Box className="w-full">
               <ValuationCardSkeleton />
             </Box>
           </Stack>
-        </Stack>
+        ) : Platform.OS === 'web' ? (
+          <FileUpload key={uploadKey} onPhotoCapture={handlePhotoCapture} />
+        ) : (
+          <CameraCapture onPhotoCapture={handlePhotoCapture} />
+        )}
       </Box>
-    </ScrollView>
+
+      <Box className="h-px bg-divider mt-8" />
+
+      {/* Recent valuations — proper Swiss grid proportions */}
+      <Stack gap={4} className="mt-8">
+        <Text variant="h2">Recent valuations</Text>
+        <Text variant="caption" className="text-ink-muted -mt-2 uppercase tracking-wide">
+          Your latest finds
+        </Text>
+
+        <Stack direction="horizontal" gap={4} className="flex-wrap mt-2">
+          <Box className="w-full">
+            <ValuationCard
+              itemDetails={PREVIEW_ITEM}
+              marketData={PREVIEW_MARKET}
+              onPress={() => router.push('/appraisal?id=preview-1')}
+            />
+          </Box>
+        </Stack>
+      </Stack>
+    </ScreenContainer>
   );
 }

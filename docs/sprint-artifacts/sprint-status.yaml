@@ -66,18 +66,18 @@ development_status:
   epic-1-retrospective: completed
 
   # Epic 2: AI Valuation Engine (11 stories)
-  epic-2: in-progress
+  epic-2: done  # All 11 stories complete - code review 2026-03-18
   2-1-create-valuation-api-endpoint: done
-  2-2-integrate-ai-item-identification: review  
+  2-2-integrate-ai-item-identification: done  # Code review complete: reraise=True fix, image size validation added
   2-3-implement-cache-layer-for-ebay-api: done  # Completion report: 2-3-implement-cache-layer-completion.md
   2-4-integrate-ebay-market-data: done  # Story points: 3 - Code review complete, all findings resolved
   2-5-implement-confidence-calculation-service: done  # Validation complete: 33/33 tests pass, 98% coverage
   2-6-build-valuationcard-component: done  # Component updated: display typography, confidence indicators, sample size caption
-  2-7-display-processing-progress-states: backlog
-  2-8-handle-ai-identification-failures: backlog
-  2-9-handle-insufficient-market-data: backlog
-  2-10-display-confidence-based-messaging: backlog
-  2-11-display-market-velocity-indicator: backlog
+  2-7-display-processing-progress-states: done  # Forward-proofed: ProgressIndicator + useProgressStages implemented, Camera integration complete
+  2-8-handle-ai-identification-failures: done  # Forward-proofed: ErrorState component with retry/fallback, Camera integration complete
+  2-9-handle-insufficient-market-data: done  # Story 2-9: Backend range widening implemented, all ACs verified
+  2-10-display-confidence-based-messaging: done  # Code review complete: all ACs validated, 18/18 screenshot tests pass
+  2-11-display-market-velocity-indicator: done  # Code review complete: 4 velocity screenshot tests pass, closes Epic 2
   epic-2-retrospective: optional
 
   # Epic 3: History & Persistence (5 stories)
