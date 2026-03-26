@@ -135,9 +135,10 @@ export function ValuationCard({
 
   const content = (
     <>
-      {/* AC1: Item photo — museum-style mat framing per Swiss design philosophy */}
+      {/* AC1: Item photo — Museum Mat framing (1px border, 4px internal padding) */}
+      {/* max-h-[50vh] prevents the image from pushing price/data below the fold */}
       {imageUri ? (
-        <Box className="p-3 bg-paper">
+        <Box className="border border-divider p-1 bg-paper m-3 max-h-[50vh] overflow-hidden">
           <Image
             source={{ uri: imageUri }}
             className="aspect-square w-full"
@@ -146,7 +147,7 @@ export function ValuationCard({
           />
         </Box>
       ) : (
-        <Box className="aspect-square bg-divider/20 items-center justify-center" accessibilityLabel="Item photo placeholder">
+        <Box className="aspect-square max-h-[50vh] bg-divider/20 items-center justify-center" accessibilityLabel="Item photo placeholder">
           <Text variant="h1" className="text-ink-muted/30">+</Text>
         </Box>
       )}
