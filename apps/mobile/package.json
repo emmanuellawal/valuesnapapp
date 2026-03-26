@@ -11,14 +11,18 @@
     "web": "expo start --web --port 8083",
     "test:screenshots": "playwright test tests/screenshots.spec.ts",
     "test:screenshots:ui": "playwright test tests/screenshots.spec.ts --ui",
-    "test:screenshots:headed": "playwright test tests/screenshots.spec.ts --headed"
+    "test:screenshots:headed": "playwright test tests/screenshots.spec.ts --headed",
+    "test": "jest",
+    "test:unit": "jest --testPathPattern='__tests__'"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/native": "^7.1.8",
     "expo": "~54.0.30",
     "expo-camera": "~17.0.10",
     "expo-constants": "~18.0.12",
+    "expo-file-system": "~19.0.21",
     "expo-font": "~14.0.10",
     "expo-image-picker": "^17.0.10",
     "expo-linking": "~8.0.11",
@@ -26,7 +30,8 @@
     "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
     "expo-web-browser": "~15.0.10",
-    "nativewind": "^4.2.1",
+    "jest-expo": "~54.0.17",
+    "nativewind": "^4.2.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
@@ -40,9 +45,24 @@
   "devDependencies": {
     "@expo/ngrok": "^4.1.3",
     "@playwright/test": "^1.57.0",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.1.0",
     "react-test-renderer": "19.1.0",
     "typescript": "~5.9.2"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|@react-native-async-storage/async-storage)"
+    ],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1",
+      "@react-native-async-storage/async-storage": "<rootDir>/node_modules/@react-native-async-storage/async-storage/jest/async-storage-mock.js"
+    },
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/tests/"
+    ]
   },
   "private": true
 }

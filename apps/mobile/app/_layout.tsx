@@ -4,7 +4,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { LogBox } from 'react-native';
+import { LogBox, Platform } from 'react-native';
 import 'react-native-reanimated';
 import '../global.css';
 
@@ -16,12 +16,23 @@ import { validateEnv } from '@/lib/env';
 // Throws if required vars are missing (when not in mock mode)
 validateEnv();
 
-// Suppress known deprecation warning from expo-router v6.0.17
-// See: https://github.com/expo/expo/issues/33248
-// TODO: Remove this once expo-router is updated to fix the internal usage
+// Suppress known deprecation warning from react-native-screens@4.16.0:
+// ScreenStackHeaderConfig passes pointerEvents="box-none" as a direct prop.
+// On native this is harmless; on web/SSR react-native-web's createDOMProps
+// flags it as deprecated (github.com/expo/expo/issues/33248).
+// LogBox handles native; the console filter below handles web and SSR output.
+// TODO: Remove once react-native-screens fixes ScreenStackHeaderConfig prop usage.
 LogBox.ignoreLogs([
   'props.pointerEvents is deprecated. Use style.pointerEvents',
 ]);
+
+if (Platform.OS === 'web') {
+  const _consoleWarn = console.warn.bind(console);
+  console.warn = (...args: Parameters<typeof console.warn>) => {
+    if (typeof args[0] === 'string' && args[0].includes('props.pointerEvents is deprecated')) return;
+    _consoleWarn(...args);
+  };
+}
 
 // Swiss Minimalist Design Theme
 // Overrides React Navigation defaults with Swiss design tokens

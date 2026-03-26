@@ -9,6 +9,8 @@ from backend.models import AnalyzeRequest
 from backend.services.ai import identify_item_from_image, AIIdentificationError
 from backend.services.confidence import calculate_market_confidence
 from backend.services.ebay import search_sold_listings, get_api_stats, reset_api_stats
+from backend.services.valuations import ValuationRepository
+from backend.models import ValuationRecord
 from backend.cache import get_cache_stats
 
 # Configure logging
@@ -116,11 +118,27 @@ async def appraise_item(request: AnalyzeRequest):
             }
             logger.info("LOW confidence: wider price range applied")
     
-    # Step 4: Combine and Return
+    # Step 4: Persist the valuation (best-effort — never blocks success)
+    valuation_id = None
+    try:
+        record = ValuationRecord.from_appraise_response(
+            identity_dict=identity.model_dump(),
+            valuation_dict=market_data,
+            confidence_dict=confidence_result.to_dict(),
+            guest_session_id=request.guest_session_id,
+        )
+        repo = ValuationRepository()
+        valuation_id = repo.save(record)
+        logger.info(f"Valuation saved: {valuation_id}")
+    except Exception as e:
+        logger.error(f"Failed to persist valuation (non-fatal): {e}")
+    
+    # Step 5: Combine and Return
     return {
         "identity": identity.model_dump(),
         "valuation": market_data,
         "confidence": confidence_result.to_dict(),
+        "valuation_id": valuation_id,
     }
 
 

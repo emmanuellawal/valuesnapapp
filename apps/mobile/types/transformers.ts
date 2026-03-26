@@ -10,6 +10,7 @@
 
 import type { Identifiers, ItemDetails, VisualCondition } from './item';
 import type { MarketData, ConfidenceLevel, MarketDataStatus, PriceRange } from './market';
+import type { ConfidenceData, ValuationResponse } from './valuation';
 
 /**
  * Raw backend response for Identifiers (before transformation).
@@ -52,6 +53,22 @@ interface RawMarketData {
   avg_days_to_sell?: number;
   confidence: string;
   message?: string;
+}
+
+/**
+ * Raw backend response for confidence data (before transformation).
+ */
+interface RawConfidenceData {
+  market_confidence: string;
+  confidence_factors: {
+    sample_size: number;
+    variance_pct: number;
+    ai_confidence: string;
+    data_source: string;
+    data_source_penalty: boolean;
+  };
+  ai_only_flag: boolean;
+  confidence_message: string;
 }
 
 /**
@@ -182,14 +199,35 @@ export function transformMarketData(raw: RawMarketData): MarketData {
 }
 
 /**
+ * Transform raw backend confidence data to frontend ConfidenceData.
+ */
+export function transformConfidenceData(raw: RawConfidenceData): ConfidenceData {
+  return {
+    marketConfidence: parseConfidence(raw.market_confidence),
+    aiConfidence: raw.confidence_factors.ai_confidence,
+    sampleSize: raw.confidence_factors.sample_size,
+    priceVariance: raw.confidence_factors.variance_pct,
+    dataSource: raw.confidence_factors.data_source,
+    dataSourcePenalty: raw.confidence_factors.data_source_penalty,
+    aiOnlyFlag: raw.ai_only_flag,
+    message: raw.confidence_message,
+  };
+}
+
+/**
  * Transform a complete valuation response from the backend.
+ * Keys match actual backend response: identity, valuation, confidence, valuation_id.
  */
 export function transformValuationResponse(raw: {
-  item_identity: RawItemIdentity;
-  market_data: RawMarketData;
-}): { itemDetails: ItemDetails; marketData: MarketData } {
+  identity: RawItemIdentity;
+  valuation: RawMarketData;
+  confidence: RawConfidenceData;
+  valuation_id?: string | null;
+}): ValuationResponse {
   return {
-    itemDetails: transformItemDetails(raw.item_identity),
-    marketData: transformMarketData(raw.market_data),
+    itemDetails: transformItemDetails(raw.identity),
+    marketData: transformMarketData(raw.valuation),
+    confidence: transformConfidenceData(raw.confidence),
+    valuationId: raw.valuation_id ?? null,
   };
 }

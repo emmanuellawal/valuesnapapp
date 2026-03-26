@@ -17,3 +17,4 @@ export type { FileUploadProps, FileUploadState, FileUploadError } from './file-u
 export { FileUpload } from './file-upload';
 
 export { SwissTabBar } from './swiss-tab-bar';
+export { SwissSidebar } from './swiss-sidebar';

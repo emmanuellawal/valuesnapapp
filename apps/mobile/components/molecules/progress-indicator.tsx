@@ -90,16 +90,9 @@ export function ProgressIndicator({
         {displayText}
       </Text>
       
-      {/* Minimal progress bar — Beneficial violation
-       * 
-       * Design rationale:
-       * - 1px height maintains Swiss restraint
-       * - Horizontal line aligns with Swiss geometric principles
-       * - No rounded corners or decorative elements
-       * - Smooth transition provides visual feedback
-       */}
+      {/* 1px progress bar — pure Swiss horizontal line */}
       <View 
-        className="h-[1px] w-48 bg-divider"
+        className="h-[1px] w-full bg-divider"
         accessibilityRole="progressbar"
         accessibilityValue={{
           min: 0,
@@ -112,18 +105,12 @@ export function ProgressIndicator({
           className="h-full bg-ink"
           style={{ 
             width: `${overallProgress}%`,
-            // Smooth transition for progress changes
             transitionProperty: 'width',
             transitionDuration: '300ms',
             transitionTimingFunction: 'ease-out',
           }}
         />
       </View>
-      
-      {/* Step counter — Swiss typography, muted for secondary info */}
-      <Text variant="caption" className="text-ink-muted">
-        Step {config.step} of {STAGE_ORDER.length}
-      </Text>
     </Stack>
   );
 }

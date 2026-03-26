@@ -41,6 +41,7 @@ export {
   type ValuationRequest,
   type ValuationResponse,
   type Valuation,
+  type ConfidenceData,
 } from './valuation';
 
 // User and auth types
@@ -58,6 +59,7 @@ export {
   transformIdentifiers,
   transformItemDetails,
   transformMarketData,
+  transformConfidenceData,
   transformValuationResponse,
 } from './transformers';
 

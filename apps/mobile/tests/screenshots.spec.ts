@@ -14,6 +14,8 @@ import * as path from 'path';
 
 test.describe('App Screenshots', () => {
   const screenshotsDir = path.join(__dirname, '../screenshots');
+  const appraisalRoute =
+    '/appraisal?brand=Canon&model=AE-1&itemType=Camera&fairMarketValue=249&priceMin=199&priceMax=299&confidence=HIGH&pricesAnalyzed=24&avgDaysToSell=21';
 
   async function waitForAppReady(page: any) {
     await page.waitForLoadState('networkidle');
@@ -47,10 +49,10 @@ test.describe('App Screenshots', () => {
     });
 
     test('web - Appraisal report', async ({ page }) => {
-      await page.goto('/');
+      await page.goto(appraisalRoute);
       await waitForAppReady(page);
-      await page.getByRole('button', { name: /^Open valuation for / }).first().click();
       await page.getByText('Appraisal').waitFor({ timeout: 15000 });
+      await page.getByTestId('appraisal-valuation').scrollIntoViewIfNeeded();
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'web-appraisal-report.png'),
@@ -75,6 +77,7 @@ test.describe('App Screenshots', () => {
       await page.goto('/appraisal?confidence=HIGH&pricesAnalyzed=25&fairMarketValue=249&brand=Canon&model=AE-1');
       await waitForAppReady(page);
       await page.getByText('Appraisal').waitFor({ timeout: 15000 });
+      await page.getByTestId('appraisal-valuation').scrollIntoViewIfNeeded();
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'web-confidence-high.png'),
@@ -86,6 +89,7 @@ test.describe('App Screenshots', () => {
       await page.goto('/appraisal?confidence=MEDIUM&pricesAnalyzed=12&fairMarketValue=145&brand=Anglepoise&model=Type%2075');
       await waitForAppReady(page);
       await page.getByText('Appraisal').waitFor({ timeout: 15000 });
+      await page.getByTestId('appraisal-valuation').scrollIntoViewIfNeeded();
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'web-confidence-medium.png'),
@@ -99,6 +103,7 @@ test.describe('App Screenshots', () => {
       await page.getByText('Appraisal').waitFor({ timeout: 15000 });
       // Wait for LOW confidence warning to appear
       await page.getByText('Limited market data').waitFor({ timeout: 5000 });
+      await page.getByTestId('appraisal-valuation').scrollIntoViewIfNeeded();
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'web-confidence-low.png'),
@@ -112,6 +117,7 @@ test.describe('App Screenshots', () => {
       await waitForAppReady(page);
       await page.getByText('Appraisal').waitFor({ timeout: 15000 });
       await page.getByText('Sells in ~21 days').waitFor({ timeout: 5000 });
+      await page.getByTestId('appraisal-valuation').scrollIntoViewIfNeeded();
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'web-velocity-present.png'),
@@ -124,9 +130,22 @@ test.describe('App Screenshots', () => {
       await waitForAppReady(page);
       await page.getByText('Appraisal').waitFor({ timeout: 15000 });
       await expect(page.getByTestId('appraisal-valuation').getByText('Sells in')).not.toBeVisible();
+      await page.getByTestId('appraisal-valuation').scrollIntoViewIfNeeded();
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'web-velocity-absent.png'),
+        fullPage: true,
+      });
+    });
+
+    // Loading state — 1px progress bar (Swiss design spec)
+    test('web - Loading state (progress bar)', async ({ page }) => {
+      await page.goto('/appraisal?_demo=loading');
+      await waitForAppReady(page);
+      await page.getByText('Identifying item...').waitFor({ timeout: 15000 });
+
+      await page.screenshot({
+        path: path.join(screenshotsDir, 'web-loading-state.png'),
         fullPage: true,
       });
     });
@@ -164,9 +183,8 @@ test.describe('App Screenshots', () => {
     });
 
     test('mobile - Appraisal report', async ({ page }) => {
-      await page.goto('/');
+      await page.goto(appraisalRoute);
       await waitForAppReady(page);
-      await page.getByRole('button', { name: /^Open valuation for / }).first().click();
       await page.getByText('Appraisal').waitFor({ timeout: 15000 });
 
       await page.screenshot({
@@ -244,6 +262,18 @@ test.describe('App Screenshots', () => {
 
       await page.screenshot({
         path: path.join(screenshotsDir, 'mobile-velocity-absent.png'),
+        fullPage: true,
+      });
+    });
+
+    // Loading state — 1px progress bar (Swiss design spec)
+    test('mobile - Loading state (progress bar)', async ({ page }) => {
+      await page.goto('/appraisal?_demo=loading');
+      await waitForAppReady(page);
+      await page.getByText('Identifying item...').waitFor({ timeout: 15000 });
+
+      await page.screenshot({
+        path: path.join(screenshotsDir, 'mobile-loading-state.png'),
         fullPage: true,
       });
     });

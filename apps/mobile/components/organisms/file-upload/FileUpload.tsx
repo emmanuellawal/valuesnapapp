@@ -316,10 +316,10 @@ export function FileUpload({
         accessibilityLabel="Photo uploaded successfully"
         accessibilityLiveRegion="polite"
       >
-        <Box className="w-full aspect-[4/3] bg-divider border border-ink overflow-hidden">
+        <Box className="w-full border border-divider p-1 bg-paper">
           <Image
             source={{ uri: uploadedPhoto.uri }}
-            style={{ width: '100%', height: '100%' }}
+            className="w-full aspect-[4/3]"
             resizeMode="contain"
             accessibilityLabel="Uploaded photo preview"
           />

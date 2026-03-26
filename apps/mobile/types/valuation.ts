@@ -5,7 +5,7 @@
  */
 
 import { ItemDetails } from './item';
-import { MarketData } from './market';
+import { MarketData, ConfidenceLevel } from './market';
 
 /**
  * Status of a valuation process.
@@ -41,14 +41,35 @@ export interface ValuationResponse {
 
   /** Market pricing data from eBay */
   marketData: MarketData;
+
+  /** Backend-assigned valuation ID (null if persistence failed) */
+  valuationId?: string | null;
+
+  /** Confidence breakdown from backend */
+  confidence?: ConfidenceData;
+}
+
+/**
+ * Confidence data from the backend confidence service.
+ * Fields mirror the backend ConfidenceResult / ConfidenceFactors shape.
+ */
+export interface ConfidenceData {
+  marketConfidence: ConfidenceLevel;
+  aiConfidence: string;
+  sampleSize: number;
+  priceVariance: number;
+  dataSource: string;
+  dataSourcePenalty: boolean;
+  aiOnlyFlag: boolean;
+  message: string;
 }
 
 /**
  * Full Valuation entity for storage and history.
  */
 export interface Valuation {
-  /** Unique valuation ID */
-  id: string;
+  /** Unique valuation ID (optional — may be absent if persistence failed) */
+  id?: string;
 
   /** ISO timestamp of creation */
   createdAt: string;

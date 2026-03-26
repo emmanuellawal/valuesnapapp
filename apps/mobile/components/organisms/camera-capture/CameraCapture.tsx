@@ -341,14 +341,14 @@ export function CameraCapture({
   if (cameraState === 'preview' && capturedPhoto) {
     return (
       <Stack gap={4} className="w-full">
-        {/* Photo preview */}
+        {/* Photo preview — Museum Mat framing */}
         <Box 
-          className="w-full aspect-square bg-ink-light border-2 border-ink overflow-hidden"
+          className="w-full border border-divider p-1 bg-paper"
           testID={`${testID}-preview`}
         >
           <Image
             source={{ uri: capturedPhoto.uri }}
-            style={{ width: '100%', height: '100%' }}
+            className="w-full aspect-square"
             resizeMode="cover"
           />
         </Box>
@@ -403,12 +403,12 @@ export function CameraCapture({
     return (
       <Stack gap={4} className="w-full">
         <Box 
-          className="w-full aspect-square bg-ink-light border-2 border-ink overflow-hidden"
+          className="w-full border border-divider p-1 bg-paper"
           testID={`${testID}-captured`}
         >
           <Image
             source={{ uri: capturedPhoto.uri }}
-            style={{ width: '100%', height: '100%' }}
+            className="w-full aspect-square"
             resizeMode="cover"
           />
         </Box>

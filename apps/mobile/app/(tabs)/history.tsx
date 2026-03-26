@@ -1,110 +1,73 @@
-import React from 'react';
-import { useRouter } from 'expo-router';
+import React, { useRef, useCallback, useState } from 'react';
+import { useWindowDimensions } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 
-import { Box, Stack, Text, ScreenContainer } from '@/components/primitives';
+import { Box, Stack, Text, SwissPressable, ScreenContainer } from '@/components/primitives';
 import { HistoryGridSkeleton } from '@/components/molecules';
 import { HistoryGrid, type HistoryGridItem } from '@/components/organisms/history-grid';
-import {
-  MOCK_CANON_CAMERA,
-  MOCK_SONY_HEADPHONES,
-  createMockItemDetails,
-  createMockMarketData,
-} from '@/types/mocks';
+import { getLocalHistory } from '@/lib/localHistory';
+import { type Valuation, ValuationStatus } from '@/types/valuation';
+import { useOnlineStatus } from '@/lib/hooks';
 
-// Build history items from mock factories
-const MOCK_HISTORY: HistoryGridItem[] = [
-  {
-    id: '1',
-    ...MOCK_CANON_CAMERA,
-  },
-  {
-    id: '2',
-    itemDetails: createMockItemDetails({
-      itemType: 'messenger bag',
-      brand: 'Coach',
-      model: 'unknown',
-      visualCondition: 'used_excellent',
-      conditionDetails: 'Light patina, no scratches',
-      categoryHint: 'Bags',
-      searchKeywords: ['Coach messenger bag', 'leather bag'],
-    }),
-    marketData: createMockMarketData({
-      keywords: 'Coach leather messenger bag',
-      totalFound: 8,
-      pricesAnalyzed: 8,
-      priceRange: { min: 80, max: 180 },
-      fairMarketValue: 120,
-      mean: 115,
-      stdDev: 28,
-      avgDaysToSell: 5,
-      confidence: 'HIGH',
-    }),
-  },
-  {
-    id: '3',
-    ...MOCK_SONY_HEADPHONES,
-  },
-  // MEDIUM confidence item for testing
-  {
-    id: '4',
-    itemDetails: createMockItemDetails({
-      itemType: 'desk lamp',
-      brand: 'Anglepoise',
-      model: 'Type 75',
-      visualCondition: 'used_good',
-      conditionDetails: 'Minor scratches on base',
-      categoryHint: 'Lighting',
-      searchKeywords: ['Anglepoise lamp', 'desk lamp'],
-    }),
-    marketData: createMockMarketData({
-      keywords: 'Anglepoise Type 75 lamp',
-      totalFound: 12,
-      pricesAnalyzed: 12,
-      priceRange: { min: 85, max: 220 },
-      fairMarketValue: 145,
-      mean: 142,
-      stdDev: 48,
-      avgDaysToSell: 14,
-      confidence: 'MEDIUM',
-    }),
-  },
-  // LOW confidence item for testing
-  {
-    id: '5',
-    itemDetails: createMockItemDetails({
-      itemType: 'art print',
-      brand: 'Unknown',
-      model: 'Vintage botanical',
-      visualCondition: 'used_excellent',
-      conditionDetails: 'No damage, slight yellowing',
-      categoryHint: 'Art',
-      searchKeywords: ['vintage botanical print', 'art print'],
-    }),
-    marketData: createMockMarketData({
-      keywords: 'vintage botanical art print',
-      totalFound: 3,
-      pricesAnalyzed: 3,
-      priceRange: { min: 25, max: 90 },
-      fairMarketValue: 55,
-      mean: 52,
-      stdDev: 28,
-      avgDaysToSell: 38,
-      confidence: 'LOW',
-    }),
-  },
-];
+/**
+ * Map raw Valuation[] from storage to HistoryGridItem[] for display.
+ * Filters out non-SUCCESS and null-response valuations.
+ * Pure function — no side effects, no React, no hooks.
+ */
+export function mapValuationsToGridItems(valuations: Valuation[]): HistoryGridItem[] {
+  return valuations
+    .filter((v) => v.status === ValuationStatus.SUCCESS && v.response != null)
+    .map((v) => ({
+      id: v.id ?? v.createdAt,
+      itemDetails: v.response!.itemDetails,
+      marketData: v.response!.marketData,
+      imageUri: v.imageUri,
+    }));
+}
 
 /**
  * History Screen — Swiss Minimalist Design
- * 
+ *
  * Collection overview with portfolio metrics.
+ * Reads real local guest history from AsyncStorage.
  */
 export default function HistoryScreen() {
   const router = useRouter();
-  const itemCount = MOCK_HISTORY.length;
-  const totalValue = MOCK_HISTORY.reduce((sum, item) => {
-    return sum + (item.marketData.fairMarketValue || 0);
-  }, 0);
+  const { width } = useWindowDimensions();
+  const isOnline = useOnlineStatus();
+  const [history, setHistory] = useState<Valuation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const numColumns =
+    width < 600 ? 1 :
+    width < 1024 ? 2 :
+    width < 1440 ? 3 :
+    4;
+
+  const fetchHistory = useCallback(async () => {
+    const data = await getLocalHistory();
+    setHistory(data);
+  }, []);
+
+  const isInitialLoad = useRef(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isInitialLoad.current) {
+        isInitialLoad.current = false;
+        fetchHistory().finally(() => setIsLoading(false));
+      } else {
+        fetchHistory();
+      }
+    }, [fetchHistory])
+  );
+
+  const historyItems = mapValuationsToGridItems(history);
+  const itemCount = historyItems.length;
+  const totalValue = historyItems.reduce(
+    (sum, item) => sum + (item.marketData.fairMarketValue ?? 0),
+    0
+  );
 
   return (
     <ScreenContainer>
@@ -119,6 +82,15 @@ export default function HistoryScreen() {
         {itemCount} items valued
       </Text>
 
+      {/* Offline banner — shown when device has no network */}
+      {!isOnline && (
+        <Box className="mt-6 px-3 py-2 bg-paper border border-divider">
+          <Text variant="caption" className="text-ink-muted uppercase tracking-wide">
+            Offline — showing cached valuations
+          </Text>
+        </Box>
+      )}
+
       {/* Items section */}
       <Box className="mt-12">
         <Stack gap={1} className="mb-6">
@@ -130,10 +102,31 @@ export default function HistoryScreen() {
           </Text>
         </Stack>
 
-        <HistoryGrid
-          items={MOCK_HISTORY}
-          onItemPress={(item) => router.push(`/appraisal?id=${item.id}`)}
-        />
+        {isLoading ? (
+          <HistoryGridSkeleton count={6} numColumns={numColumns} />
+        ) : itemCount === 0 ? (
+          <Box className="py-16 items-center">
+            <Text variant="h3" className="text-ink-muted">
+              No valuations yet
+            </Text>
+            <Text variant="body" className="text-ink-muted mt-2 text-center">
+              Tap the Camera tab to snap your first item
+            </Text>
+            <Box className="mt-6">
+              <SwissPressable onPress={() => router.push('/')} accessibilityLabel="Start valuing items">
+                <Text variant="body" className="font-semibold">
+                  Start Valuing
+                </Text>
+              </SwissPressable>
+            </Box>
+          </Box>
+        ) : (
+          <HistoryGrid
+            items={historyItems}
+            numColumns={numColumns}
+            onItemPress={(item) => router.push(`/appraisal?id=${item.id}`)}
+          />
+        )}
       </Box>
     </ScreenContainer>
   );

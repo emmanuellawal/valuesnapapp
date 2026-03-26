@@ -80,13 +80,14 @@ development_status:
   2-11-display-market-velocity-indicator: done  # Code review complete: 4 velocity screenshot tests pass, closes Epic 2
   epic-2-retrospective: optional
 
-  # Epic 3: History & Persistence (5 stories)
-  epic-3: backlog
-  3-1-create-valuations-database-schema: backlog
-  3-2-implement-save-valuation-flow: backlog
-  3-3-build-history-list-view: backlog
-  3-4-display-valuation-details: backlog
-  3-5-implement-offline-viewing: backlog
+  # Epic 3: History & Persistence (6 stories)
+  epic-3: done
+  3-1-create-valuations-database-schema: done  # DB schema + ValuationRecord + ValuationRepository implemented
+  3-2-implement-save-valuation-flow: done  # Backend persistence + mobile API client + localHistory + code review complete (2026-03-19)
+  3-3-build-history-list-view: done
+  3-4-display-valuation-details: done
+  3-5-implement-offline-viewing: done
+  3-6-desktop-sidebar-nav: done
   epic-3-retrospective: optional
 
   # Epic 4: User Authentication (11 stories)

@@ -132,9 +132,8 @@ export function createMockValuationResponse(
 export function createMockValuation(
   overrides?: Partial<Valuation>
 ): Valuation {
-  const id = overrides?.id ?? `val_${Date.now()}`;
   return {
-    id,
+    id: overrides?.id ?? `val_${Date.now()}`,
     createdAt: overrides?.createdAt ?? new Date().toISOString(),
     status: overrides?.status ?? ValuationStatus.SUCCESS,
     request: createMockValuationRequest(overrides?.request),

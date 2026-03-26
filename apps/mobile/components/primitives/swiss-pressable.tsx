@@ -120,10 +120,11 @@ export function SwissPressable({
           opacity = OPACITY_PRESSED;
         }
 
-        // Combine all styles
+        // Combine all styles — scale(0.98) tactile feedback on press
         return [
           baseStyles,
           { opacity },
+          pressed && !disabled && { transform: [{ scale: 0.98 }] },
           isFocused && FOCUS_STYLE,
         ];
       }}
