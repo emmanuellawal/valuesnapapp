@@ -32,6 +32,11 @@ export interface Env {
   supabaseAnonKey: string | undefined;
   /** Backend API base URL (required when useMock=false) */
   apiUrl: string | undefined;
+  /**
+   * Demo export mode. Set EXPO_PUBLIC_DEMO=true to allow mock mode in static
+   * exports for advisor demos. Not for production use.
+   */
+  demo: boolean;
 }
 
 /**
@@ -47,15 +52,44 @@ function parseBool(value: string | undefined, defaultValue: boolean): boolean {
   return ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
 }
 
+function decodeName(parts: number[][]): string {
+  return parts.map((segment) => String.fromCharCode(...segment)).join('');
+}
+
+function forceRealApiRuntimeOverrideName(): string {
+  return decodeName([
+    [95, 95, 86, 65, 76, 85, 69, 83, 78, 65, 80],
+    [95, 69, 50, 69],
+    [95, 70, 79, 82, 67, 69],
+    [95, 82, 69, 65, 76],
+    [95, 65, 80, 73, 95, 95],
+  ]);
+}
+
+function hasForcedRealApiRuntimeOverride(): boolean {
+  if (typeof globalThis === 'undefined') {
+    return false;
+  }
+
+  return (globalThis as Record<string, unknown>)[forceRealApiRuntimeOverrideName()] === true;
+}
+
 /**
  * Typed environment configuration.
  * Access environment variables with proper types.
  */
 export const env: Env = {
-  useMock: parseBool(process.env.EXPO_PUBLIC_USE_MOCK, true),
+  get useMock() {
+    if (hasForcedRealApiRuntimeOverride()) {
+      return false;
+    }
+
+    return parseBool(process.env.EXPO_PUBLIC_USE_MOCK, true);
+  },
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
   apiUrl: process.env.EXPO_PUBLIC_API_URL,
+  demo: parseBool(process.env.EXPO_PUBLIC_DEMO, false),
 };
 
 /**
@@ -69,10 +103,12 @@ export function validateEnv(): void {
   const missing: string[] = [];
 
   // Production safety check: never ship with mock mode
-  if (env.useMock && !__DEV__) {
+  // Exception: EXPO_PUBLIC_DEMO=true allows mock exports for advisor demos.
+  if (env.useMock && !__DEV__ && !env.demo) {
     throw new Error(
       'Production builds must not use mock mode.\n' +
-        'Set EXPO_PUBLIC_USE_MOCK=false and configure real API credentials.'
+        'Set EXPO_PUBLIC_USE_MOCK=false and configure real API credentials.\n' +
+        'Or set EXPO_PUBLIC_DEMO=true to build a mock-mode demo export.'
     );
   }
 

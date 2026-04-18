@@ -3,6 +3,16 @@
  * Story 3.3, AC6
  */
 
+jest.mock('@/contexts/AuthContext', () => ({
+  useAuth: jest.fn(() => ({
+    session: null,
+    user: null,
+    isGuest: true,
+    isLoading: false,
+    signOut: jest.fn(),
+  })),
+}));
+
 import { mapValuationsToGridItems } from '@/app/(tabs)/history';
 import { ValuationStatus } from '@/types/valuation';
 import type { Valuation } from '@/types/valuation';

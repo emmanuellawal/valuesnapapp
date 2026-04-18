@@ -3,6 +3,16 @@
  * Story 3.4, AC7
  */
 
+jest.mock('@/contexts/AuthContext', () => ({
+  useAuth: jest.fn(() => ({
+    session: null,
+    user: null,
+    isGuest: true,
+    isLoading: false,
+    signOut: jest.fn(),
+  })),
+}));
+
 import { findValuationById } from '@/app/appraisal';
 import { ValuationStatus } from '@/types/valuation';
 import type { Valuation } from '@/types/valuation';

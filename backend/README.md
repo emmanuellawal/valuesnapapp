@@ -155,6 +155,7 @@ Add to `backend/.env`:
 ```bash
 # Supabase Configuration
 SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key-here
 SUPABASE_SERVICE_KEY=your-service-role-key-here
 
 # Cache TTL (hours, 1-24)
@@ -162,6 +163,9 @@ EBAY_CACHE_TTL_HOURS=6
 ```
 
 Find your credentials in Supabase Dashboard → Settings → API.
+
+- `SUPABASE_ANON_KEY` is used by authenticated user endpoints so database Row Level Security applies to reads, claims, and deletes.
+- `SUPABASE_SERVICE_KEY` remains backend-only for admin operations like account deletion.
 
 ### Usage
 

@@ -18,3 +18,4 @@ export { HistoryGridSkeleton } from './history-grid-skeleton';
 export type { FormFieldSkeletonProps } from './form-field-skeleton';
 export { FormFieldSkeleton } from './form-field-skeleton';
 export { BatchCardSkeleton } from './batch-card-skeleton';
+export { GuestBanner } from './guest-banner';

@@ -106,3 +106,15 @@ export async function deleteFromLocalHistory(id: string): Promise<void> {
     // Best-effort: if delete fails, history remains unchanged
   }
 }
+
+/**
+ * Clear all locally stored guest valuation history.
+ * Best-effort only — server data has already become the source of truth.
+ */
+export async function clearLocalHistory(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(HISTORY_KEY);
+  } catch {
+    // Best-effort: if clear fails, stale local history may remain on disk
+  }
+}

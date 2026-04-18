@@ -2,6 +2,7 @@ import React from 'react';
 import { useWindowDimensions } from 'react-native';
 import { Tabs } from 'expo-router';
 
+import { BREAKPOINTS } from '@/constants/breakpoints';
 import { SwissTabBar } from '@/components/organisms/swiss-tab-bar';
 import { SwissSidebar } from '@/components/organisms/swiss-sidebar';
 
@@ -9,8 +10,8 @@ import { SwissSidebar } from '@/components/organisms/swiss-sidebar';
  * Tab Layout - Swiss Minimalist Design
  *
  * Responsive navigation:
- * - width >= 1024px → SwissSidebar (left-side column, desktop)
- * - width < 1024px  → SwissTabBar (bottom bar, mobile/tablet)
+ * - width >= BREAKPOINTS.desktop → SwissSidebar (left-side column, desktop)
+ * - width < BREAKPOINTS.desktop  → SwissTabBar (bottom bar, mobile/tablet)
  *
  * Uses custom SwissTabBar with:
  * - Text-only labels (no icons)
@@ -19,7 +20,7 @@ import { SwissSidebar } from '@/components/organisms/swiss-sidebar';
  */
 export default function TabLayout() {
   const { width } = useWindowDimensions();
-  const isDesktop = width >= 1024;
+  const isDesktop = width >= BREAKPOINTS.desktop;
 
   return (
     <Tabs

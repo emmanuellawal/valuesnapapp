@@ -51,6 +51,7 @@ DROP POLICY IF EXISTS "Service role full access" ON public.valuations;
 DROP POLICY IF EXISTS "Users can view own valuations" ON public.valuations;
 DROP POLICY IF EXISTS "Users can insert own valuations" ON public.valuations;
 DROP POLICY IF EXISTS "Users can delete own valuations" ON public.valuations;
+DROP POLICY IF EXISTS "Users can claim guest valuations" ON public.valuations;
 
 -- Service role has full access (used by backend for guest writes)
 CREATE POLICY "Service role full access"
@@ -80,6 +81,16 @@ CREATE POLICY "Users can delete own valuations"
     FOR DELETE
     TO authenticated
     USING (auth.uid() = user_id);
+
+-- Authenticated users can claim unowned guest valuations into their own account.
+-- The API still filters by guest_session_id; this policy ensures the updated row
+-- must end up owned by the authenticated user.
+CREATE POLICY "Users can claim guest valuations"
+    ON public.valuations
+    FOR UPDATE
+    TO authenticated
+    USING (user_id IS NULL)
+    WITH CHECK (auth.uid() = user_id);
 
 -- Column comments
 COMMENT ON TABLE public.valuations IS 'Persistent storage for item valuations (Epic 3)';

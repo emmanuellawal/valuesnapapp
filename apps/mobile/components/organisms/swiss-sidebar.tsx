@@ -7,7 +7,7 @@ import { Text } from '@/components/primitives';
 /**
  * SwissSidebar — Desktop left-side navigation panel
  *
- * Renders at width >= 1024px in place of SwissTabBar.
+ * Renders at width >= BREAKPOINTS.desktop in place of SwissTabBar.
  *
  * Swiss Minimalist design principles:
  * - Text-only labels (no icons)

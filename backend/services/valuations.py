@@ -5,6 +5,8 @@ Story 3.1: Create Valuations Database Schema
 import logging
 from typing import Optional
 
+from supabase import Client
+
 from ..cache import get_supabase
 from ..models import ValuationRecord
 
@@ -15,6 +17,12 @@ class ValuationRepository:
     """Persistence layer for valuation records using Supabase."""
 
     TABLE = "valuations"
+
+    def __init__(self, supabase_client: Optional[Client] = None):
+        self._supabase = supabase_client
+
+    def _client(self) -> Client:
+        return self._supabase or get_supabase()
 
     def save(self, record: ValuationRecord) -> str:
         """
@@ -43,7 +51,7 @@ class ValuationRepository:
         }
 
         try:
-            supabase = get_supabase()
+            supabase = self._client()
             result = supabase.table(self.TABLE).insert(data).execute()
 
             if not result.data or len(result.data) == 0:
@@ -67,7 +75,7 @@ class ValuationRepository:
             ValueError on database errors.
         """
         try:
-            supabase = get_supabase()
+            supabase = self._client()
             result = (
                 supabase.table(self.TABLE)
                 .select("*")
@@ -95,7 +103,7 @@ class ValuationRepository:
             ValueError on database errors.
         """
         try:
-            supabase = get_supabase()
+            supabase = self._client()
             query = supabase.table(self.TABLE).select("*").eq("id", valuation_id)
 
             if user_id is not None:
@@ -124,7 +132,7 @@ class ValuationRepository:
             ValueError on database errors.
         """
         try:
-            supabase = get_supabase()
+            supabase = self._client()
             query = supabase.table(self.TABLE).delete().eq("id", valuation_id)
 
             if user_id is not None:

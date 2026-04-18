@@ -9,11 +9,13 @@ import { CameraCapture, FileUpload, type CapturedPhoto } from '@/components/orga
 import { useProgressStages, useOnlineStatus } from '@/lib/hooks';
 import { buildEbaySearchUrl } from '@/lib/utils';
 import { appraise, AppraiseError } from '@/lib/api';
-import { getOrCreateGuestSessionId, saveToLocalHistory } from '@/lib/localHistory';
+import { getLocalHistory, getOrCreateGuestSessionId, saveToLocalHistory } from '@/lib/localHistory';
+import { useAuth } from '@/contexts/AuthContext';
 import { transformValuationResponse } from '@/types/transformers';
 import { ValuationStatus } from '@/types/valuation';
 import type { ItemDetails } from '@/types/item';
 import type { MarketData } from '@/types/market';
+import { GuestBanner } from '@/components/molecules';
 
 /**
  * Read an image URI as a base64-encoded string for API submission.
@@ -53,8 +55,10 @@ async function readImageAsBase64(uri: string): Promise<string> {
  */
 export default function CameraScreen() {
   const router = useRouter();
+  const { isGuest } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadKey, setUploadKey] = useState(0);
+  const [guestValuationCount, setGuestValuationCount] = useState(0);
   const [error, setError] = useState<{ type: ErrorType; message?: string } | null>(null);
   const [lastResult, setLastResult] = useState<{
     item: ItemDetails;
@@ -123,17 +127,23 @@ export default function CameraScreen() {
       setLastResult(resultData);
       recentResultRef.current = resultData;
       
-      // Save to local guest history (best-effort)
-      saveToLocalHistory({
-        id: result.valuationId ?? undefined,
-        createdAt: new Date().toISOString(),
-        status: ValuationStatus.SUCCESS,
-        request: { imageBase64: undefined }, // Don't store base64 in history
-        response: result,
-        imageUri: photo.uri,
-      }).catch(() => {
-        // Best-effort — don't block the UI
-      });
+      try {
+        await saveToLocalHistory({
+          id: result.valuationId ?? undefined,
+          createdAt: new Date().toISOString(),
+          status: ValuationStatus.SUCCESS,
+          request: { imageBase64: undefined },
+          response: result,
+          imageUri: photo.uri,
+        });
+
+        if (isGuest) {
+          const history = await getLocalHistory();
+          setGuestValuationCount(history.length);
+        }
+      } catch {
+        // Best-effort local persistence should not block the UI.
+      }
     } catch (err) {
       setIsProcessing(false);
       if (err instanceof AppraiseError) {
@@ -269,6 +279,8 @@ export default function CameraScreen() {
       </Box>
 
       <Box className="h-px bg-divider mt-8" />
+
+      <GuestBanner visible={isGuest && guestValuationCount >= 3} />
 
       {/* Recent valuations — shows last real result when available */}
       {!lastResult && recentResultRef.current && !isProcessing && !error && (

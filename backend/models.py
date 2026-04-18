@@ -101,6 +101,12 @@ class AnalyzeRequest(BaseModel):
         return v
 
 
+class MigrateGuestRequest(BaseModel):
+    """Request body for /api/migrate-guest."""
+
+    guest_session_id: str = Field(..., min_length=1)
+
+
 class ValuationRecord(BaseModel):
     """
     Persistent valuation record matching the `valuations` table schema.

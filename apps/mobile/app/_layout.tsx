@@ -1,16 +1,20 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import * as Linking from 'expo-linking';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { LogBox, Platform } from 'react-native';
 import 'react-native-reanimated';
 import '../global.css';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { ErrorBoundary } from '@/components/organisms/ErrorBoundary';
+import { TestHarnessBoundary } from '@/components/TestHarnessBoundary';
 import { validateEnv } from '@/lib/env';
+import { handleIncomingAuthRedirect } from '@/lib/authRecovery';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 // Validate environment configuration at app startup
 // Throws if required vars are missing (when not in mock mode)
@@ -88,14 +92,63 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
+  const lastHandledUrl = useRef<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const processAuthRedirect = async (url: string | null | undefined) => {
+      if (!isMounted || !url || lastHandledUrl.current === url) {
+        return;
+      }
+
+      lastHandledUrl.current = url;
+      const result = await handleIncomingAuthRedirect(url);
+      if (!isMounted || !result.handled || !result.route) {
+        return;
+      }
+
+      if (result.error) {
+        router.replace(
+          `${result.route}?error=${encodeURIComponent(result.error)}` as never,
+        );
+        return;
+      }
+
+      router.replace(result.route as never);
+    };
+
+    Linking.getInitialURL()
+      .then((url) => {
+        void processAuthRedirect(url);
+      })
+      .catch(() => {
+        // No-op: startup proceeds normally when there is no inbound auth redirect.
+      });
+
+    const subscription = Linking.addEventListener('url', (event) => {
+      void processAuthRedirect(event.url);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.remove();
+    };
+  }, [router]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : SwissTheme}>
       <ErrorBoundary>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        </Stack>
+        <AuthProvider>
+          <TestHarnessBoundary />
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="auth" options={{ headerShown: false }} />
+            <Stack.Screen name="account" options={{ headerShown: false }} />
+          </Stack>
+        </AuthProvider>
       </ErrorBoundary>
     </ThemeProvider>
   );

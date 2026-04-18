@@ -1,21 +1,25 @@
 import logging
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from backend.cache import get_cache_stats, get_supabase, get_user_supabase
 from backend.config import allowed_origins, settings
-from backend.models import AnalyzeRequest
+from backend.models import AnalyzeRequest, MigrateGuestRequest, ValuationRecord
+from backend.rate_limit import RateLimitRule, enforce_user_rate_limit
 from backend.services.ai import identify_item_from_image, AIIdentificationError
 from backend.services.confidence import calculate_market_confidence
 from backend.services.ebay import search_sold_listings, get_api_stats, reset_api_stats
 from backend.services.valuations import ValuationRepository
-from backend.models import ValuationRecord
-from backend.cache import get_cache_stats
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+DELETE_ACCOUNT_RATE_LIMIT = RateLimitRule.parse("5/hour")
+MIGRATE_GUEST_RATE_LIMIT = RateLimitRule.parse("10/hour")
+GET_VALUATIONS_RATE_LIMIT = RateLimitRule.parse("120/minute")
 
 app = FastAPI(title="ValueSnap Engine")
 
@@ -27,6 +31,53 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def _get_authenticated_user_context(request: Request, action: str):
+    """Validate the bearer token and return the admin client, user id, and token."""
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+
+    token = auth_header.split(" ", 1)[1].strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+
+    supabase = get_supabase()
+
+    try:
+        user_response = supabase.auth.get_user(token)
+        user = getattr(user_response, "user", None)
+        user_id = getattr(user, "id", None)
+        if not user_id:
+            raise ValueError("Authenticated user missing from token")
+    except Exception as e:
+        logger.warning(f"{action}: token verification failed: {e}")
+        raise HTTPException(status_code=401, detail="Invalid or expired token") from e
+
+    return supabase, user_id, token
+
+
+def _serialize_valuation_record(record: ValuationRecord) -> dict:
+    """Convert a ValuationRecord to a JSON-safe response payload."""
+    return {
+        "id": record.id,
+        "item_name": record.item_name,
+        "item_type": record.item_type,
+        "brand": record.brand,
+        "price_min": float(record.price_min) if record.price_min is not None else None,
+        "price_max": float(record.price_max) if record.price_max is not None else None,
+        "fair_market_value": (
+            float(record.fair_market_value) if record.fair_market_value is not None else None
+        ),
+        "confidence": record.confidence,
+        "sample_size": record.sample_size,
+        "image_thumbnail_url": record.image_thumbnail_url,
+        "ai_response": record.ai_response,
+        "ebay_data": record.ebay_data,
+        "confidence_data": record.confidence_data,
+        "created_at": record.created_at.isoformat() if record.created_at else None,
+    }
 
 
 @app.get("/")
@@ -214,5 +265,75 @@ def reset_api_statistics():
     reset_api_stats()
     logger.info("API statistics reset by admin endpoint")
     return {"status": "reset", "message": "API call counters have been reset"}
+
+
+@app.delete("/api/account")
+async def delete_account(request: Request):
+    """Delete the authenticated user's account and all their valuations."""
+    supabase, user_id, token = _get_authenticated_user_context(
+        request,
+        "Account delete rejected due to invalid token",
+    )
+    enforce_user_rate_limit(user_id, "delete-account", DELETE_ACCOUNT_RATE_LIMIT)
+
+    try:
+        user_supabase = get_user_supabase(token)
+        user_supabase.table("valuations").delete().eq("user_id", user_id).execute()
+        logger.info(f"Deleted valuations for user {user_id}")
+    except Exception as e:
+        logger.error(f"Failed to delete valuations for user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete account data") from e
+
+    try:
+        supabase.auth.admin.delete_user(user_id)
+        logger.info(f"Deleted auth user {user_id}")
+    except Exception as e:
+        logger.error(f"Failed to delete auth user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete account") from e
+
+    return {"success": True}
+
+
+@app.post("/api/migrate-guest")
+async def migrate_guest(request: Request, body: MigrateGuestRequest):
+    """Claim guest-owned valuations for the authenticated user."""
+    _, user_id, token = _get_authenticated_user_context(request, "migrate-guest")
+    enforce_user_rate_limit(user_id, "migrate-guest", MIGRATE_GUEST_RATE_LIMIT)
+
+    try:
+        user_supabase = get_user_supabase(token)
+        result = (
+            user_supabase.table("valuations")
+            .update({"user_id": user_id})
+            .eq("guest_session_id", body.guest_session_id)
+            .is_("user_id", "null")
+            .execute()
+        )
+        migrated = len(result.data or [])
+        logger.info(
+            "Migrated %s valuations for user %s from session %s",
+            migrated,
+            user_id,
+            body.guest_session_id,
+        )
+        return {"migrated": migrated}
+    except Exception as e:
+        logger.error(f"Failed to migrate guest data for user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to migrate guest data") from e
+
+
+@app.get("/api/valuations")
+async def get_valuations(request: Request):
+    """Return the authenticated user's valuations, newest first."""
+    _, user_id, token = _get_authenticated_user_context(request, "get-valuations")
+    enforce_user_rate_limit(user_id, "get-valuations", GET_VALUATIONS_RATE_LIMIT)
+
+    try:
+        repo = ValuationRepository(supabase_client=get_user_supabase(token))
+        records = repo.get_by_user(user_id)
+        return {"valuations": [_serialize_valuation_record(record) for record in records]}
+    except Exception as e:
+        logger.error(f"Failed to fetch valuations for user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch valuations") from e
 
 

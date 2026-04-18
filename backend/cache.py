@@ -7,7 +7,7 @@ import logging
 from typing import Optional
 from datetime import datetime, timedelta, timezone
 
-from supabase import create_client, Client
+from supabase import Client, ClientOptions, create_client
 
 from .config import settings
 
@@ -17,18 +17,31 @@ logger = logging.getLogger(__name__)
 _supabase_client: Optional[Client] = None
 
 
+def _create_supabase_client(supabase_key: str, auth_token: Optional[str] = None) -> Client:
+    options = ClientOptions(auto_refresh_token=False, persist_session=False)
+    if auth_token:
+        options.headers["Authorization"] = f"Bearer {auth_token}"
+
+    return create_client(settings.supabase_url, supabase_key, options=options)
+
+
 def get_supabase() -> Client:
     """Get or create Supabase client."""
     global _supabase_client
     if _supabase_client is None:
         if not settings.supabase_url or not settings.supabase_service_key:
             raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_KEY must be configured")
-        _supabase_client = create_client(
-            settings.supabase_url,
-            settings.supabase_service_key
-        )
+        _supabase_client = _create_supabase_client(settings.supabase_service_key)
         logger.info("Supabase client initialized")
     return _supabase_client
+
+
+def get_user_supabase(access_token: str) -> Client:
+    """Create a short-lived authenticated client so RLS applies to user operations."""
+    if not settings.supabase_url or not settings.supabase_anon_key:
+        raise ValueError("SUPABASE_URL and SUPABASE_ANON_KEY must be configured")
+
+    return _create_supabase_client(settings.supabase_anon_key, auth_token=access_token)
 
 
 def get_cache_key(item_identity: dict) -> str:
