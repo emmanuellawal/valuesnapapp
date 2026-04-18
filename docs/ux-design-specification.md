@@ -1258,8 +1258,9 @@ Six design directions were explored within the Swiss Minimalist framework:
 
 **Navigation:**
 - Mobile: Bottom icon bar (Camera, History, Settings)
-- Desktop: Top header with icon bar
-- No sidebar navigation (Swiss Minimalist clean)
+- Desktop: Minimal left workstation rail with a 1px divider
+- Active appraisal workspace follows a 10/45/45 split (navigation / image / data)
+- Same destinations across breakpoints; desktop chrome changes to fit the workstation layout
 
 **Primary Component (Valuation Card):**
 
@@ -1441,13 +1442,13 @@ flowchart TD
 
 **Entry Points:**
 - Desktop web interface
-- "Batch Upload" option in navigation
+- Upload action within the desktop capture workspace
 
 **Flow:**
 
 ```mermaid
 flowchart TD
-    A[Batch Upload Page] --> B[Drag & Drop Zone]
+  A[Desktop Upload Workspace] --> B[Drag & Drop Zone]
     B --> C[User Drops Files]
     C --> D{File Validation}
     D -->|Invalid| E[Show Error - Invalid Files]
@@ -2188,17 +2189,20 @@ Listing Form:
 - Inactive: `text-ink-light`
 - Badge: Red dot for notifications
 
-**Desktop Navigation (Top Header):**
+**Desktop Navigation (Workstation Rail):**
 ```
-┌────────────────────────────────────────────────────────────────┐
-│  ValueSnap                    [📷 Capture]  [📋]  [⚙️]         │
-└────────────────────────────────────────────────────────────────┘
+┌────────┬──────────────────────────────┬──────────────────────────────┐
+│ [📷]   │ [Museum Mat Photo]           │ Item details / valuation     │
+│ [📋]   │                              │ report                       │
+│ [⚙️]   │                              │                              │
+└────────┴──────────────────────────────┴──────────────────────────────┘
 ```
 
-- Fixed at top
-- Logo/title left, actions right
-- Primary action as button (Capture)
-- Secondary actions as icons
+- Fixed at the left on desktop breakpoints
+- Target workstation ratio: 10/45/45 (navigation / image / data)
+- 1px dividers separate the rail, image pane, and report pane
+- Desktop upload remains a capture action inside the workstation, not oversized top chrome
+- Sidebar stays visually restrained so content owns the width
 
 **Back Navigation:**
 - Back arrow (`←`) in header, left side
@@ -2312,9 +2316,10 @@ ValueSnap is mobile-first, optimizing for the primary use case (quick valuations
 - Enhanced spacing (Swiss breathing room)
 
 **Desktop Strategy:**
-- Top navigation header
+- Compact left workstation rail
+- 10/45/45 appraisal layout for active valuation work
 - 3-4 column card grids
-- Batch upload interface (drag-and-drop)
+- Drag-and-drop / file upload for desktop capture and batch-friendly workflows
 - Side-by-side layouts for listing form
 - Keyboard shortcuts for power users
 

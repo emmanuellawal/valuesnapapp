@@ -233,7 +233,7 @@ These are tracked post-launch, not implemented as stories:
 
 **From UX Design - Platform Behavior:**
 - UX-10: Mobile: Camera as home screen, bottom navigation
-- UX-11: Desktop: Top header navigation, batch upload interface
+- UX-11: Desktop: Left workstation sidebar with 10/45/45 appraisal layout and desktop-first upload workflow
 - UX-12: Result cards slide up over camera viewfinder
 - UX-13: Offline: Cached valuations viewable, request queuing
 
@@ -1476,7 +1476,7 @@ These are tracked post-launch, not implemented as stories:
 **Given** the user is in the app (FR44)
 **When** navigation is displayed
 **Then** mobile shows bottom tab bar with 3 tabs (Camera, History, Settings)
-**And** desktop shows top header with navigation items
+**And** desktop shows a compact left workstation sidebar with the same navigation items
 **And** active tab is visually indicated (bold text, no color change)
 **And** tab icons are consistent line-weight style
 
@@ -1638,7 +1638,8 @@ These are tracked post-launch, not implemented as stories:
 
 **Given** the user is on a desktop browser (FR46)
 **When** the app loads
-**Then** top header navigation replaces bottom tabs (UX-11)
+**Then** a compact left workstation sidebar replaces bottom tabs (UX-11)
+**And** active appraisal screens use a 10/45/45 split for navigation, image review, and data
 **And** file upload zone is the primary capture method
 **And** keyboard shortcuts work: Tab (focus), Enter (select), Escape (cancel/close)
 **And** focus trap is active in modals

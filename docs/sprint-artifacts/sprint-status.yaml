@@ -78,7 +78,7 @@ development_status:
   2-9-handle-insufficient-market-data: done  # Story 2-9: Backend range widening implemented, all ACs verified
   2-10-display-confidence-based-messaging: done  # Code review complete: all ACs validated, 18/18 screenshot tests pass
   2-11-display-market-velocity-indicator: done  # Code review complete: 4 velocity screenshot tests pass, closes Epic 2
-  epic-2-retrospective: optional
+  epic-2-retrospective: completed
 
   # Epic 3: History & Persistence (6 stories)
   epic-3: done
@@ -88,36 +88,60 @@ development_status:
   3-4-display-valuation-details: done
   3-5-implement-offline-viewing: done
   3-6-desktop-sidebar-nav: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: completed
 
-  # Epic 4: User Authentication (11 stories)
-  epic-4: backlog
-  4-1-configure-supabase-auth: backlog
-  4-2-implement-user-registration: backlog
-  4-3-implement-user-sign-in: backlog
-  4-4-implement-google-oauth-sign-in: backlog
-  4-5-implement-sign-out: backlog
-  4-6-implement-session-persistence: backlog
-  4-7-implement-guest-mode: backlog
-  4-8-build-settings-screen: backlog
-  4-9-implement-account-deletion-confirmation: backlog
-  4-10-execute-account-deletion: backlog
-  4-11-migrate-guest-data-to-account: backlog
-  epic-4-retrospective: optional
+  # Epic 4: User Authentication (14 stories)
+  epic-4: done
+  4-1-configure-supabase-auth: done
+  4-2-implement-user-registration: done
+  4-3-implement-user-sign-in: done
+  4-4-implement-google-oauth-sign-in: done
+  4-4-2-oauth-test-hardening: done  # F2+F3 tests added; F4/F5/F6 deferred to Story 4.4.3
+  4-5-implement-sign-out: done
+  4-6-implement-session-persistence: done
+  4-7-implement-guest-mode: done  # Guest banner, listing gate, and test coverage added
+  4-8-build-settings-screen: done
+  4-9-implement-account-deletion-confirmation: done
+  4-10-execute-account-deletion: done
+  4-11-migrate-guest-data-to-account: done
+  4-12-consolidate-browser-e2e-test-harness: done
+  4-13-reduce-playwright-auth-bootstrap-globals: done
+  4-14-remove-browser-mock-mode-override-from-e2e-harness: done
+  epic-4-retrospective: completed
+
+  # Epic 4.5: Retrospective Debt Resolution (6 stories)
+  epic-4.5: done
+  4.5-1-transformer-contract-test: done  # Origin: Epic 2 retro → re-raised Epic 3 retro after exact bug hit
+  4.5-2-centralise-breakpoint-constants: done  # Origin: Epic 3 retro → re-raised Epic 4 retro
+  4.5-3-frontend-pre-review-checklist: done  # Origin: Epic 3 retro; same finding classes recurred in Epic 4
+  4.5-4-expo-public-service-key-ci-lint: done  # Origin: Epic 4 retro; prevents credential exposure
+  4.5-5-ebay-sold-listings-api-spike: done  # Origin: Epic 2 retro; never investigated
+  4.5-6-formalise-deferred-backlog-stories: done  # Origin: Epics 2–4 retros; 4 named-but-unscheduled items
+  epic-4.5-retrospective: completed
 
   # Epic 5: Listing Creation (10 stories)
-  epic-5: backlog
-  5-1-build-listing-form-component: backlog
-  5-2-pre-fill-title-from-ai-identification: backlog
-  5-3-pre-fill-description-from-ai: backlog
-  5-4-pre-fill-price-from-valuation: backlog
-  5-5-pre-fill-category-from-ai-classification: backlog
-  5-6-pre-fill-condition-from-ai-assessment: backlog
-  5-7-include-original-photo-in-listing: backlog
-  5-8-enable-field-editing: backlog
-  5-9-implement-copy-to-clipboard: backlog
-  5-10-display-pre-filled-vs-manual-field-distinction: backlog
-  epic-5-retrospective: optional
+  epic-5: done
+  5-1-build-listing-form-component: done
+  5-2-pre-fill-title-from-ai-identification: done
+  5-3-pre-fill-description-from-ai: done
+  5-4-pre-fill-price-from-valuation: done
+  5-5-pre-fill-category-from-ai-classification: done
+  5-6-pre-fill-condition-from-ai-assessment: done
+  5-7-include-original-photo-in-listing: done
+  5-8-enable-field-editing: done
+  5-9-implement-copy-to-clipboard: done
+  5-10-display-pre-filled-vs-manual-field-distinction: done
+  5-11-image-hosting-thumbnails: done  # Origin: Epic 3 retro + Story 3.4 notes; listings need photo upload
+  epic-5-retrospective: completed
+
+  # Epic 5.5: Pre-Epic 6 Readiness (5 stories)
+  epic-5.5: backlog
+  5.5-1-enforce-debt-gates: backlog                # Origin: Epic 5 retro AI6 (Critical); lint script + checklist extension + code review mandate
+  5.5-2-deploy-backend-to-render: backlog          # Origin: Epic 5 retro AI1 (Critical); persistent API for real-device testing
+  5.5-3-wire-and-polish-settings: backlog          # Origin: Epic 5 retro AI3+AI4 (High+Medium); Theme/Notifications/Currency + safe-area fix
+  5.5-4-restore-gallery-picker: backlog            # Origin: Epic 5 retro AI2 (High); FR2 gap — library picker not reachable in normal flow
+  5.5-5-lock-epic-6-workstation-acs: backlog       # Origin: Epic 5 retro AI5 (High); 10/45/45 ACs + PWA manifest ACs + Render URL in stories
+  epic-5.5-retrospective: optional
 
   # Epic 6: Platform & PWA (10 stories)
   epic-6: backlog
@@ -131,6 +155,8 @@ development_status:
   6-8-handle-rate-limit-exceeded: backlog
   6-9-implement-mobile-ux-patterns: backlog
   6-10-implement-desktop-ux-patterns: backlog
+  6-11-desktop-sidebar-collapse: backlog  # Origin: Epic 3 retro; desktop rail has no collapse/expand toggle under the 10/45/45 workstation model
+  6-12-offline-migration-retry-queue: backlog  # Origin: Epic 4 retro; failed guest migration not retried when back online
   epic-6-retrospective: optional
 
   # Epic 7: Accessibility & Polish (12 stories)
@@ -147,5 +173,7 @@ development_status:
   7-10-implement-reduced-motion-support: backlog
   7-11-cross-browser-testing: backlog
   7-12-configure-production-monitoring: backlog
+  7-13-oauth-edge-cases-cancel-dismiss-expired: backlog  # Origin: Epic 4 Story 4.4-2 dev notes; F4/F5/F6 paths untested
+  7-14-fix-swiss-pressable-accessibility-state-merge: backlog  # Origin: Story 5.8 code review; SwissPressable spreads {...props} after its own accessibilityState={{ disabled }}, so any caller-supplied accessibilityState key overwrites disabled instead of merging — affects buttons that are simultaneously disabled and carry a custom accessibilityState (e.g. selected); natural fix home: 7-3-implement-focus-indicators or 7-6-announce-errors-to-screen-readers
   epic-7-retrospective: optional
 

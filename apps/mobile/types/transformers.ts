@@ -34,6 +34,7 @@ interface RawItemIdentity {
   estimated_age: string;
   category_hint: string;
   search_keywords: string[];
+  description?: string;
   identifiers: RawIdentifiers;
 }
 
@@ -169,6 +170,7 @@ export function transformItemDetails(raw: RawItemIdentity): ItemDetails {
     estimatedAge: raw.estimated_age,
     categoryHint: raw.category_hint,
     searchKeywords: raw.search_keywords,
+    description: raw.description ?? '',
     identifiers: transformIdentifiers(raw.identifiers),
   };
 }

@@ -110,10 +110,11 @@ All stories are **strictly sequential** — each one depends on the prior.
 
 ### Story 3.6: Desktop Sidebar Navigation
 **Frontend only. Responsive layout enhancement.**  
-- Switch tab navigation at `width >= 1024` from bottom bar to a 240px left sidebar
+- Switch tab navigation at `width >= 1024` from bottom bar to a compact left desktop rail
 - Use React Navigation `tabBarPosition: 'left'` with a custom `SwissSidebar`
 - Preserve the existing `SwissTabBar` unchanged below 1024px
 - Keep the same three routes (Camera, History, Settings) with text-only Swiss Minimalist navigation
+- Historical implementation note: Story 3.6 shipped with a fixed 240px width, but future desktop polish is governed by the 10/45/45 workstation model adopted in the Epic 5 retrospective
 
 ---
 

@@ -53,8 +53,9 @@ Concretely:
   highlight boxes, no coloured dots.
 - **Text-only, flush-left.** Navigation labels align to the left edge of the sidebar
   column. Ragged right. Never centered.
-- Width: fixed at **240px**. Not collapsible in this story. Collapse/expand is a
-  future enhancement.
+- Width: compact desktop rail. This story shipped with a fixed **240px** width, but
+  future desktop refinement follows the adopted **10/45/45** workstation model.
+  Collapse/expand remains a future enhancement.
 
 This is explicitly different from ChatGPT (dark background, icon + label, hover
 states, conversation list). Different from linear app nav (icon-dominant). It should
@@ -77,7 +78,7 @@ read like the left column of a well-designed printed catalog.
 **Given** the app is viewed at `width >= 1024px`  
 **When** any tab screen is active  
 **Then** a left-side navigation column is visible  
-**And** the column is 240px wide with a single 1px right border using the `divider` color  
+**And** the column is a compact desktop rail with a single 1px right border using the `divider` color  
 **And** the column background is `paper` (white) — no fill color  
 **And** the three navigation items (Camera, History, Settings) are rendered as text labels  
 **And** the active item is visually distinguished by font weight alone (bold or `font-semibold` in the type scale)  
@@ -132,7 +133,7 @@ read like the left column of a well-designed printed catalog.
   - [x] Accept `state` and `navigation` (same props as `SwissTabBar`) or a simplified equivalent
   - [x] Render three `SwissPressable` items: Camera, History, Settings with text labels
   - [x] Active detection: compare current route to tab name, apply `font-semibold` weight to active label
-  - [x] Layout: `View` 240px wide, `borderRightWidth: 1`, `borderRightColor` = divider token, full height
+  - [x] Layout: compact desktop rail with `borderRightWidth: 1`, `borderRightColor` = divider token, full height
   - [x] No icons. No background fill. No hover state fill.
 - [x] Export `SwissSidebar` from `apps/mobile/components/organisms/index.ts` (AC1)
   - [x] Add `export { SwissSidebar } from './swiss-sidebar';` to the organisms barrel
@@ -144,7 +145,7 @@ read like the left column of a well-designed printed catalog.
   - [x] The `<Tabs.Screen>` entries remain identical; only `screenOptions` and `tabBar` become responsive
   - [x] No new route files created
 - [x] Verify main content area fills remaining width in sidebar layout (AC1)
-  - [x] On desktop, content area should take `flex: 1` next to the 240px sidebar
+  - [x] On desktop, content area should take `flex: 1` next to the desktop rail
   - [x] Verify no horizontal overflow or clipping on a 1200px–1440px viewport
 - [x] TypeScript + test validation (AC5)
   - [x] Run `tsc --noEmit` and resolve any type errors
@@ -191,7 +192,7 @@ export default function TabLayout() {
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  [240px sidebar]  │  [flex:1 content area]                       │
+│  [desktop rail]   │  [flex:1 content area]                       │
 │                   │                                               │
 │  VALUESNAP        │  Your collection                              │
 │                   │  $1,249                                       │
@@ -228,10 +229,11 @@ React Navigation bottom tabs already support `tabBarPosition: 'left'`, which cau
 the navigator layout to place the custom tab bar beside the content instead of below it.
 That is the preferred implementation path for this story.
 
-With `tabBarPosition='left'` and a custom sidebar that is 240px wide, the content area
-should take the remaining space automatically. Verify this at 1280px before adding any
-manual wrapper layout. Do not introduce an extra `flex-row` wrapper unless the navigator
-layout proves insufficient in practice.
+With `tabBarPosition='left'` and a custom desktop rail, the content area should take the
+remaining space automatically. The shipped implementation used a fixed 240px width, but
+future workstation refinement follows the 10/45/45 desktop spec. Verify this at 1280px
+before adding any manual wrapper layout. Do not introduce an extra `flex-row` wrapper
+unless the navigator layout proves insufficient in practice.
 
 ### Swiss Minimalist Sidebar Checklist
 
@@ -290,7 +292,7 @@ claude-sonnet-4-6 (dev-story workflow — 2026-03-22)
 - No new unit tests required (AC5): no pure logic extracted; all AC5 verification via `tsc --noEmit` + `npx jest` (30/30 pass) + manual smoke test.
 - Party-mode actionable notes applied: (1) active state = `font-semibold` weight only, no dash prefix; (2) no `useSafeAreaInsets` in sidebar — desktop-only component.
 - `tabBarPosition: isDesktop ? 'left' : 'bottom'` passed through `screenOptions` causes React Navigation to use `flexDirection: 'row'` for the root container on desktop, placing the sidebar beside the content area automatically. No manual flex wrapper needed.
-- `SwissSidebar` uses `style={{ width: 240, flex: 1 }}` + `className="bg-paper border-r border-divider py-8 px-6"`. NativeWind `border-r` sets `borderRightWidth: 1`; `border-divider` sets the color token.
+- `SwissSidebar` uses `style={{ width: 240, flex: 1 }}` + `className="bg-paper border-r border-divider py-8 px-6"`. NativeWind `border-r` sets `borderRightWidth: 1`; `border-divider` sets the color token. This fixed-width implementation is historical; future desktop planning follows the 10/45/45 workstation rail model.
 - `_layout.tsx` uses a single `useWindowDimensions()` call and `isDesktop` constant to drive both `screenOptions.tabBarPosition` and the `tabBar` render prop — clean, no duplication.
 - `SwissTabBar` code not modified (AC2 verified by inspection).
 - 0 TypeScript errors (`@react-navigation/bottom-tabs` 7.9.0 — `tabBarPosition` is a typed `BottomTabNavigationOptions` field).

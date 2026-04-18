@@ -9,6 +9,7 @@ import { ValuationCard, ConfidenceWarning, ProgressIndicator, ValuationCardSkele
 import { createMockItemDetails, createMockMarketData } from '@/types/mocks';
 import type { ConfidenceLevel } from '@/types';
 import { getLocalHistory, deleteFromLocalHistory } from '@/lib/localHistory';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Valuation } from '@/types/valuation';
 
 export function findValuationById(history: Valuation[], id: string): Valuation | undefined {
@@ -31,6 +32,7 @@ function formatDetailTimestamp(iso: string): string {
 
 export default function AppraisalReportScreen() {
   const router = useRouter();
+  const { isGuest } = useAuth();
   const params = useLocalSearchParams<{
     imageUri?: string;
     brand?: string;
@@ -119,7 +121,19 @@ export default function AppraisalReportScreen() {
     }
 
     function handleEbay() {
-      Alert.alert('Coming soon', 'eBay listing will be available in a future update.');
+      if (isGuest) {
+        router.push('/auth/register');
+        return;
+      }
+
+      const listingId = detailValuation.id ?? response?.valuationId ?? params.id;
+
+      if (listingId) {
+        router.push(`/listing/${listingId}`);
+        return;
+      }
+
+      Alert.alert('Unable to list', 'No valuation ID found. Please try re-appraising.');
     }
 
     return (

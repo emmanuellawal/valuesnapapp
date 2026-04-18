@@ -1,6 +1,6 @@
 /**
  * Utility Functions
- * 
+ *
  * Centralized exports for all utility modules
  */
 
@@ -19,3 +19,11 @@ export {
   buildEbaySearchUrl,
   buildEbaySoldSearchUrl,
 } from './ebay-search';
+
+export {
+  buildAiListingTitle,
+} from './listing-title';
+
+export {
+  mapVisualConditionToListingCondition,
+} from './listing-condition';

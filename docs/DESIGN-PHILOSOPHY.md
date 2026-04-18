@@ -290,5 +290,80 @@ But **pragmatically user-focused** where it helps:
 ---
 
 **Approved By:** Project Team  
-**Date:** February 11, 2026  
-**Next Review:** After Epic 2 completion
+**Date:** March 18, 2026  
+**Next Review:** After Epic 4 completion
+
+---
+
+## 🖥️ Desktop Workstation Spec (≥ lg breakpoint)
+
+**Adopted:** March 18, 2026  
+**Context:** This spec defines the desktop (≥1024px) design language for ValueSnap. It sits alongside the existing mobile-first Expo build. The *design principles* are adopted; the library prescriptions (Radix UI, Framer Motion, Next.js) are not — equivalent outcomes are achieved through the existing Expo/React Native Web/NativeWind stack.
+
+### Two-Context Design
+
+| Context | Breakpoint | Layout | Primary User |
+|---|---|---|---|
+| **Mobile** | `< lg` | Tab bar, single-column, touch-first | Alex (casual thrift, on-the-go) |
+| **Desktop** | `≥ lg` | Sidebar nav, 10/45/45 workstation, data-dense | Sarah (estate seller, batch workflow) |
+
+### Desktop Layout Architecture
+
+**Global Sidebar:**
+- Fixed, restrained left rail targeting ~10% of the workstation width with a 1px `border-right`
+- Geometric icons for navigation (Lucide-style, functional only)
+- Replaces bottom tab bar at desktop breakpoint
+- Flush-left alignment, no centered icons, no oversized chrome
+
+**Desktop Workstation Appraisal View:**
+- Left rail (~10% width): Navigation and workspace controls
+- Center pane (~45% width): Museum Mat photo display (fixed)
+- Right pane (~45% width): Scrollable appraisal data report
+- Clean 1px vertical dividers between the three regions
+- Data-dense layout keeps content dominant, not the navbar
+
+**Museum Mat Framing (all contexts):**
+- All item photos wrapped in 1px `border-divider` with 4px internal padding
+- White (`bg-paper`) background behind the image
+- Mimics professional gallery/museum presentation
+- Sharp corners — no rounding
+
+### Desktop-Specific Patterns
+
+**Data Grids (Epic 4+):**
+- TanStack Table (headless) for batch review interfaces
+- Swiss-styled: 1px borders, flush-left text, caption-weight headers
+- Sortable columns for price, confidence, velocity
+
+**Hover States:**
+- Subtle opacity change (0.85) on interactive elements
+- No color shifts, no shadows — Swiss restraint
+
+### Interaction Patterns (all contexts)
+
+**Tactile Feedback:**
+- `scale(0.98)` on press for all pressable elements
+- 100ms duration, applied globally via `SwissPressable`
+- No bounce or spring — linear, restrained
+
+**Progress Indicators:**
+- 1px horizontal line expanding in width
+- Full-width track with `300ms ease-out` transition
+- No circular spinners, no step counters
+- Typography-driven stage labels above the bar
+
+**Transitions:**
+- 300ms opacity or width transitions for state changes
+- No decorative animations — only functional feedback
+
+### What This Spec Does NOT Change
+
+- **Framework:** Expo Router + React Native Web (no Next.js pivot)
+- **Components:** Custom primitives (Box, Stack, Text, SwissPressable) — no Radix UI
+- **Motion:** React Native Animated / Reanimated — no Framer Motion
+- **Mobile layout:** Tab bar, single-column, touch-first — unchanged
+- **Color, typography, grid:** Already aligned — no changes needed
+
+### Decision Rationale
+
+The desktop spec was evaluated by the full BMAD team (PM, Architect, UX, Dev, Analyst) on March 18, 2026 and refined during the Epic 5 retrospective on April 18, 2026. Consensus: adopt the *design vision* as the desktop breakpoint target while preserving the existing Expo architecture. The visual outcomes (restrained sidebar, 10/45/45 workstation layout, museum mat, tap feedback, 1px progress) are all achievable without a framework pivot. Library-specific prescriptions (Radix, Framer Motion) are replaced by equivalent React Native patterns.

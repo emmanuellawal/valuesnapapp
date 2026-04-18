@@ -40,6 +40,7 @@ export function createMockItemDetails(
     estimatedAge: 'unknown',
     categoryHint: 'Test Category',
     searchKeywords: ['test', 'item'],
+    description: 'Mock item description for eBay listing.',
     identifiers: createMockIdentifiers(overrides?.identifiers),
     ...overrides,
   };

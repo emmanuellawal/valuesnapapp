@@ -660,19 +660,22 @@ ValueSnap is a **Mobile-First Progressive Web App (PWA)** built with Expo Router
 
 #### Navigation (Swiss Minimalist)
 
-**Structure:** Minimal fixed header with clean icon bar
+**Structure:** Responsive navigation system with bottom tabs on mobile and a restrained workstation rail on desktop
 
 | Element | Design |
 |---------|--------|
-| **Header** | Thin (48-56px), wordmark typography only (no logo mark) |
-| **Nav Icons** | Line-weight icons, not filled |
+| **Mobile nav** | Bottom tab bar with Camera, History, Settings |
+| **Desktop rail** | Left workstation rail with 1px divider, targeting ~10% of the layout width |
+| **Nav items** | Line-weight icons, not filled |
 | **Active State** | Simple underline or bold weight—no color change |
-| **Consistency** | Identical layout mobile ↔ desktop, no navigation shift |
+| **Consistency** | Same information architecture across breakpoints; desktop chrome adapts to a 10/45/45 workstation layout |
 
 **Navigation Items:**
 - **Camera** (primary action)
 - **History** (past valuations)
 - **Settings** (account, preferences)
+
+**Desktop workstation rule:** At `lg` and above, appraisal screens target a **10/45/45** split for navigation, image review, and valuation data so the sidebar stays minimal and content remains dominant.
 
 #### Component Patterns
 

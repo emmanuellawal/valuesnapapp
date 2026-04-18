@@ -53,6 +53,7 @@ export interface Identifiers {
  *   - estimated_age → estimatedAge
  *   - category_hint → categoryHint
  *   - search_keywords → searchKeywords
+ *   - description → description
  *   - identifiers → identifiers
  *
  * @example
@@ -66,6 +67,7 @@ export interface Identifiers {
  *   estimatedAge: '1990s',
  *   categoryHint: 'Wristwatches',
  *   searchKeywords: ['Rolex Submariner', 'Rolex automatic'],
+ *   description: 'Vintage Rolex Submariner with light wear and a clean dial.',
  *   identifiers: {
  *     upc: null,
  *     modelNumber: 'Submariner',
@@ -98,6 +100,9 @@ export interface ItemDetails {
 
   /** 3-5 precise keywords for eBay search API */
   searchKeywords: string[];
+
+  /** eBay listing description (1-3 sentences). Empty string when AI did not provide one. */
+  description: string;
 
   /** Product identifiers visible in the image */
   identifiers: Identifiers;

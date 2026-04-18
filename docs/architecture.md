@@ -212,7 +212,7 @@ npx expo install react-dom react-native-web @expo/metro-runtime
 | Component | Reason |
 |-----------|--------|
 | Material Design theme/colors | Replaced by Swiss Minimalist |
-| NavigationRail/TopAppBar | Replaced by minimal header + icon bar |
+| Material NavigationRail/TopAppBar | Replaced by Swiss navigation patterns (mobile tabs + restrained desktop workstation rail) |
 | RippleCard, MaterialFAB | Not Swiss Minimalist |
 | Decorative gradients/shadows | Conflicts with Swiss objectivity |
 
