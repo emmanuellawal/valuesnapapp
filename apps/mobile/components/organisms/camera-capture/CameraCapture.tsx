@@ -17,7 +17,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Image, Platform, Linking } from 'react-native';
+import { Image, Linking } from 'react-native';
 import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 

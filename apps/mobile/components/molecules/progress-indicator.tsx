@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 
-import { Box, Stack, Text } from '@/components/primitives';
+import { Stack, Text } from '@/components/primitives';
 
 /**
  * Progress stages matching backend processing flow.

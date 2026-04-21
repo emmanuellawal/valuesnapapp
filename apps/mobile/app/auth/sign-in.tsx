@@ -278,7 +278,7 @@ export default function SignInScreen() {
           {/* Create account link */}
           <Box className="flex-row justify-center items-center mt-4 gap-1">
             <Text variant="body-sm" className="text-ink-muted">
-              Don't have an account?
+              Don{"'"}t have an account?
             </Text>
             <SwissPressable
               accessibilityLabel="Create a new account"

@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Alert } from 'react-native';
-import { Stack } from 'expo-router';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 
-import { Box, Stack as SwissStack, Text, ScreenContainer } from '@/components/primitives';
-import { SwissPressable } from '@/components/primitives';
+import { Box, Stack as SwissStack, Text, ScreenContainer, SwissPressable } from '@/components/primitives';
 import { ValuationCard, ConfidenceWarning, ProgressIndicator, ValuationCardSkeleton } from '@/components/molecules';
 import { createMockItemDetails, createMockMarketData } from '@/types/mocks';
 import type { ConfidenceLevel } from '@/types';

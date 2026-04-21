@@ -62,6 +62,7 @@ validation-rules:
 - [ ] **Quality Gates Passed:** All quality checks and validations completed successfully
 - [ ] **No HALT Conditions:** No blocking issues or incomplete work remaining
 - [ ] **User Communication Ready:** Implementation summary prepared for user review
+- [ ] **New config/tooling files tracked by git:** For every new file introduced by this story (e.g. `eslint.config.js`, `.prettierrc`, `jest.config.js`, `tsconfig.json` variants), run `git status --porcelain <path>` and confirm the file is NOT listed as `??` (untracked). If untracked: `git add <path>` before marking the story ready for review.
 
 ## 🎯 Final Validation Output
 

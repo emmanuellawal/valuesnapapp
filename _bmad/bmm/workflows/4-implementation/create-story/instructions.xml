@@ -310,7 +310,8 @@
   </step>
 
   <step n="6" goal="Update sprint status and finalize">
-    <invoke-task>Validate against checklist at {installed_path}/checklist.md using _bmad/core/tasks/validate-workflow.xml</invoke-task>
+    <!-- Quality check: interactive flow, no report file generated -->
+    <invoke-task>Load {installed_path}/checklist.md and execute its interactive Steps 1–8 directly: re-analyse source documents, present findings in chat, ask user which improvements to apply, edit story file in-place. Do NOT invoke validate-workflow.xml and do NOT write a validation-report-*.md file.</invoke-task>
     <action>Save story document unconditionally</action>
 
     <!-- Update sprint status -->

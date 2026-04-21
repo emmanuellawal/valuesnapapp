@@ -191,7 +191,7 @@ export default function CameraScreen() {
           Status
         </Text>
         <Text variant="display" className="text-ink mt-2">
-          You're{'\n'}offline
+          You{"'"}re{'\n'}offline
         </Text>
         <Text variant="body" className="text-ink-light mt-4">
           Connect to the internet to value items.
@@ -215,7 +215,7 @@ export default function CameraScreen() {
       {/* Header — dramatic typographic hierarchy */}
       <Text variant="display">What are you{'\n'}selling?</Text>
       <Text variant="body" className="text-ink-light mt-3">
-        Snap a photo and we'll find its value
+        Snap a photo and we{"'"}ll find its value
       </Text>
 
       <Box className="h-px bg-divider mt-8" />

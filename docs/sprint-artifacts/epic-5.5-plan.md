@@ -2,7 +2,7 @@
 
 **Date:** April 18, 2026
 **Epic Duration:** Estimated 2–3 days
-**Stories:** 5
+**Stories:** 6
 **Dependencies:** Epic 5 ✅ Complete
 
 ---
@@ -36,6 +36,7 @@ All five stories are scoped small (30 min – half day each). No new features be
 | 6 | Theme / Notifications / Currency settings are stubs | Epic 5 retro · AI3 | High / Feature gap | 5.5-3 |
 | 7 | Settings safe-area offset and mobile scrollbar visible | Epic 5 retro · AI4 | Medium / Polish | 5.5-3 |
 | 8 | Epic 6 workstation ACs not locked in story format | Epic 5 retro · AI5 | High / Planning | 5.5-5 |
+| 9 | `npm run lint` gate is local-only — no CI enforces it on PR merge | 5.5-1 code-review M4 | Medium / Process | 5.5-6 |
 
 ---
 
@@ -47,10 +48,11 @@ All five stories are scoped small (30 min – half day each). No new features be
 5.5-3  Wire + polish settings       ─── depends on 5.5-1 (runs under checklist)
 5.5-4  Restore gallery picker       ─── depends on 5.5-1 (runs under checklist)
 5.5-5  Lock Epic 6 ACs              ─── depends on 5.5-2 (Render URL needed for AC reference)
+5.5-6  Add CI lint pipeline         ─── depends on 5.5-1 (lint script must exist before CI runs it)
 
 Recommended execution order:
   Phase 1 (day 1):  5.5-1 + 5.5-2 in parallel
-  Phase 2 (day 2):  5.5-3 + 5.5-4 in parallel (after 5.5-1)
+  Phase 2 (day 2):  5.5-3 + 5.5-4 + 5.5-6 in parallel (after 5.5-1)
   Phase 3 (day 3):  5.5-5 (after 5.5-2 gives a confirmed Render URL)
 ```
 
@@ -355,7 +357,7 @@ Epic 6 (`epic-6: in-progress`) must not begin until all of the following are tru
 
 | Gate | Verified by |
 |------|-------------|
-| `npm run lint` exits 0 in `apps/mobile/` | CI or manual run |
+| `npm run lint` exits 0 in `apps/mobile/` | CI (5.5-6) — not manual |
 | Frontend pre-review checklist includes Epic 5 pattern checks | Checklist file review |
 | Code review section required by checklist before story close | Checklist file review |
 | `GET <render-url>/health` returns `{"status": "ok"}` | curl / browser |
@@ -376,4 +378,5 @@ Epic 6 (`epic-6: in-progress`) must not begin until all of the following are tru
 | 5.5-3 Wire + polish settings | Feature gap | 2–3 hrs |
 | 5.5-4 Restore gallery picker | Feature gap | 1–2 hrs |
 | 5.5-5 Lock Epic 6 workstation ACs | Planning | 30–45 min |
-| **Total** | | **~5–9 hours** |
+| 5.5-6 Add CI lint pipeline | Process / Infra | 15–30 min |
+| **Total** | | **~5.5–9.5 hours** |

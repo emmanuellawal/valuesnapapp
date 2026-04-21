@@ -135,12 +135,13 @@ development_status:
   epic-5-retrospective: completed
 
   # Epic 5.5: Pre-Epic 6 Readiness (5 stories)
-  epic-5.5: backlog
-  5.5-1-enforce-debt-gates: backlog                # Origin: Epic 5 retro AI6 (Critical); lint script + checklist extension + code review mandate
-  5.5-2-deploy-backend-to-render: backlog          # Origin: Epic 5 retro AI1 (Critical); persistent API for real-device testing
+  epic-5.5: in-progress
+  5.5-1-enforce-debt-gates: done            # Origin: Epic 5 retro AI6 (Critical); lint script + checklist extension + code review mandate
+  5.5-2-deploy-backend-to-render: in-progress       # Origin: Epic 5 retro AI1 (Critical); persistent API for real-device testing
   5.5-3-wire-and-polish-settings: backlog          # Origin: Epic 5 retro AI3+AI4 (High+Medium); Theme/Notifications/Currency + safe-area fix
   5.5-4-restore-gallery-picker: backlog            # Origin: Epic 5 retro AI2 (High); FR2 gap — library picker not reachable in normal flow
   5.5-5-lock-epic-6-workstation-acs: backlog       # Origin: Epic 5 retro AI5 (High); 10/45/45 ACs + PWA manifest ACs + Render URL in stories
+  5.5-6-add-ci-lint-pipeline: ready-for-dev        # Origin: 5.5-1 code-review M4; wire npm run lint + npm test into GitHub Actions on PR to main
   epic-5.5-retrospective: optional
 
   # Epic 6: Platform & PWA (10 stories)

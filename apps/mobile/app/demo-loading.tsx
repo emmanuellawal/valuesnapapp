@@ -19,7 +19,7 @@ export default function DemoLoadingScreen() {
         What are you selling?
       </Text>
       <Text variant="body" className="text-ink-light mt-1">
-        Snap a photo and we'll find its value
+        Snap a photo and we{"'"}ll find its value
       </Text>
 
       <Box className="h-px bg-divider mt-8" />
