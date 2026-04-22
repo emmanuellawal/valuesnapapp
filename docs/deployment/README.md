@@ -23,7 +23,7 @@ Deploy the API from the **repository root** so `from backend.*` imports resolve.
 | Root Directory | `.` (repo root — leave blank if Render treats empty as root) |
 | Build Command | `pip install -r backend/requirements.txt` |
 | Start Command | `uvicorn backend.main:app --host 0.0.0.0 --port $PORT` |
-| Python version | Pinned via `backend/runtime.txt` (`python-3.11.9`) |
+| Python version | Pinned via `runtime.txt` at **repo root** (`python-3.11.9`). Render reads this file from the service's Root Directory — NOT alongside `requirements.txt`. Putting it in `backend/runtime.txt` is silently ignored and Render falls back to its latest Python (currently 3.14), which breaks transitive wheels. |
 
 ### After first deploy
 
