@@ -70,18 +70,49 @@ EXPO_PUBLIC_USE_MOCK=false
 
 Since the API is now public, **do not** use `expo start --tunnel` for device testing. Tunnels were only needed when Metro AND the backend both had to be reachable by the phone. Now:
 
-- `npm run start:lan` (or `npm run ios:lan`) — phone and dev laptop on same WiFi — works instantly, no TLS, no ngrok.
-- Only fall back to `start:tunnel` if LAN is impossible (corporate WiFi client-isolation, different networks).
+- **macOS / native Linux:** `npm run start:lan` (or `npm run ios:lan`). Phone and dev laptop on same Wi-Fi — no TLS, no ngrok.
+- **WSL2 on Windows:** see the WSL subsection below — the default `--lan` binds Metro to WSL's virtual NIC (172.x.x.x), which is **not** routable from your phone.
+- Only fall back to `start:tunnel` if LAN is impossible (corporate Wi-Fi client-isolation, different networks). Expect to hit the ngrok-free.dev interstitial that breaks Expo Go's WSS upgrade on iOS.
 
-Why not tunnel:
-- ngrok free tier serves an HTML interstitial on `*.ngrok-free.dev`, which breaks Expo Go's WSS upgrade and surfaces as "A TLS error caused the secure connection to fail" on iOS.
-- The custom `scripts/patch-expo-ngrok.cjs` patch exists only because the Expo-bundled ngrok drifted against the local binary; LAN mode eliminates both sides of that problem.
+#### WSL2 setup — pick one
+
+**Option A (preferred, zero repo changes): `networkingMode=mirrored`**
+
+Requires Windows 11 22H2+ and WSL 2.0+ (check with `wsl --version`). In `%USERPROFILE%\.wslconfig` on Windows:
+
+```ini
+[wsl2]
+networkingMode=mirrored
+```
+
+Then `wsl --shutdown` and reopen WSL. Linux now sees the Windows host's real network adapters (your Wi-Fi IP is directly available inside WSL). After that, `npm run start:lan` works with no tricks.
+
+**Option B (fallback): `npm run start:wsl`**
+
+For older WSL, company-managed Windows, or if mirrored mode isn't viable. One-time Windows setup (admin PowerShell on the Windows host, NOT inside WSL):
+
+```powershell
+# From the repo root on Windows:
+powershell -ExecutionPolicy Bypass -File apps\mobile\scripts\setup-wsl-portproxy.ps1
+```
+
+That adds a `netsh portproxy` rule and a firewall allow-rule for port 8083. You only need to re-run it if your WSL IP changes (which happens on reboot unless you use mirrored mode).
+
+Then from inside WSL:
+
+```bash
+cd apps/mobile
+npm run start:wsl
+```
+
+The script auto-detects your Windows LAN IP via `ipconfig.exe`, exports `REACT_NATIVE_PACKAGER_HOSTNAME` so Metro advertises the Windows IP (not WSL's) to Expo Go, and hands off to `expo start --lan`. The QR you scan on your phone will point at `192.168.x.x:8083`.
 
 ### Smoke tests (acceptance)
 
 1. `curl` `/health` — 200 and `{"status":"healthy"}`.
 2. One real appraisal from a device with `EXPO_PUBLIC_API_URL` set to the Render URL.
 3. From a browser on `http://localhost:8083`, DevTools console: `fetch('https://<url>/health').then(r => r.json())` — no CORS error when `CORS_ORIGINS` is unset (wildcard allowed).
+4. `curl https://valuesnapapp.onrender.com/admin/api-stats` — the `cache_stats` key must be a count object, **not** `{"error":"[Errno -2] Name or service not known"}`. That error means Supabase env vars on Render are misconfigured (URL typo, missing, or service key wrong) — appraisals will silently return `valuation_id: null` and history/migration will be broken.
 
 ---
 
