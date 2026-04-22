@@ -16,6 +16,9 @@ numpy>=2.0.0
 # Retry logic for API calls
 tenacity>=9.0.0
 
+# AI (GPT visual identification)
+openai>=1.0.0
+
 # Database (Supabase)
 supabase>=2.0.0
 
