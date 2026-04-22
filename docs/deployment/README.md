@@ -23,18 +23,16 @@ Deploy the API from the **repository root** so `from backend.*` imports resolve.
 | Root Directory | `.` (repo root — leave blank if Render treats empty as root) |
 | Build Command | `pip install -r backend/requirements.txt` |
 | Start Command | `uvicorn backend.main:app --host 0.0.0.0 --port $PORT` |
-| Python version | Pinned via `runtime.txt` at **repo root** (`python-3.11.9`). Render reads this file from the service's Root Directory — NOT alongside `requirements.txt`. Putting it in `backend/runtime.txt` is silently ignored and Render falls back to its latest Python (currently 3.14), which breaks transitive wheels. |
+| Python version | Pinned via `.python-version` at **repo root** AND `PYTHON_VERSION` in `render.yaml` (`3.11.9`). Render does **not** read `runtime.txt` (Heroku convention) — do not use it. |
 
-### After first deploy
+### Live URL
 
-Replace the placeholder in this doc with your live URL (from the Render service page):
-
-**Render service URL:** `https://<your-service-name>.onrender.com`
+**Render service URL:** `https://valuesnapapp.onrender.com`
 
 Health check:
 
 ```bash
-curl -sS "https://<your-service-name>.onrender.com/health"
+curl -sS "https://valuesnapapp.onrender.com/health"
 # Expected: {"status":"healthy"}
 ```
 
@@ -61,7 +59,23 @@ Set in the dashboard — **names only**; copy values from your local `backend/.e
 
 ### Mobile app
 
-See `apps/mobile/.env.render` for the `EXPO_PUBLIC_API_URL` pattern. Use `EXPO_PUBLIC_USE_MOCK=false` when pointing at Render.
+Set in `apps/mobile/.env` (gitignored — copy from `apps/mobile/.env.render`):
+
+```
+EXPO_PUBLIC_API_URL=https://valuesnapapp.onrender.com
+EXPO_PUBLIC_USE_MOCK=false
+```
+
+### Running on a physical device — use LAN, not tunnel
+
+Since the API is now public, **do not** use `expo start --tunnel` for device testing. Tunnels were only needed when Metro AND the backend both had to be reachable by the phone. Now:
+
+- `npm run start:lan` (or `npm run ios:lan`) — phone and dev laptop on same WiFi — works instantly, no TLS, no ngrok.
+- Only fall back to `start:tunnel` if LAN is impossible (corporate WiFi client-isolation, different networks).
+
+Why not tunnel:
+- ngrok free tier serves an HTML interstitial on `*.ngrok-free.dev`, which breaks Expo Go's WSS upgrade and surfaces as "A TLS error caused the secure connection to fail" on iOS.
+- The custom `scripts/patch-expo-ngrok.cjs` patch exists only because the Expo-bundled ngrok drifted against the local binary; LAN mode eliminates both sides of that problem.
 
 ### Smoke tests (acceptance)
 
