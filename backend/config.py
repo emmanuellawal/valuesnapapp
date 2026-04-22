@@ -1,8 +1,9 @@
 import logging
+import os
 from typing import List, Optional, Sequence, Union
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
@@ -79,11 +80,11 @@ class Settings(BaseSettings):
     storage_cost_per_month: float = 50
     dom_cap_days: int = 90
 
-    class Config:
-        # Look for .env in the backend directory (relative to this config file)
-        import os
-        _config_dir = os.path.dirname(os.path.abspath(__file__))
-        env_file = os.path.join(_config_dir, ".env")
+    model_config = SettingsConfigDict(
+        env_file=os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 def parse_origins(origins: Union[str, Sequence[str], None]) -> List[str]:

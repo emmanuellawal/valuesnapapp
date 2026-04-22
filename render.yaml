@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: valuesnapapp-backend
+    runtime: python
+    rootDir: .
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: USE_MOCK
+        value: "false"
+      - key: EBAY_USE_SANDBOX
+        value: "false"
