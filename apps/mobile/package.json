@@ -17,6 +17,7 @@
     "test:e2e:migration": "playwright test -c playwright.migration.config.ts tests/migration-flow.spec.ts",
     "test:prod-harness-guard": "rm -rf dist-prod-guard && env EXPO_NO_DOTENV=1 EXPO_PUBLIC_USE_MOCK=false EXPO_PUBLIC_SUPABASE_URL=https://guard.supabase.co EXPO_PUBLIC_SUPABASE_ANON_KEY=guard-anon-key EXPO_PUBLIC_API_URL=http://localhost:8000 npx expo export --platform web --output-dir dist-prod-guard && node ./scripts/assert-no-test-harness-in-prod.mjs dist-prod-guard",
     "test": "jest",
+    "test:ci": "jest --ci --runInBand",
     "test:unit": "jest --testPathPattern='__tests__'",
     "lint": "expo lint --max-warnings 0"
   },
