@@ -134,7 +134,7 @@ development_status:
   5-11-image-hosting-thumbnails: done  # Origin: Epic 3 retro + Story 3.4 notes; listings need photo upload
   epic-5-retrospective: completed
 
-  # Epic 5.5: Pre-Epic 6 Readiness (5 stories)
+  # Epic 5.5: Pre-Epic 6 Readiness (7 stories)
   epic-5.5: in-progress
   5.5-1-enforce-debt-gates: done            # Origin: Epic 5 retro AI6 (Critical); lint script + checklist extension + code review mandate
   5.5-2-deploy-backend-to-render: in-progress       # Origin: Epic 5 retro AI1 (Critical); persistent API for real-device testing
@@ -142,6 +142,7 @@ development_status:
   5.5-4-restore-gallery-picker: backlog            # Origin: Epic 5 retro AI2 (High); FR2 gap — library picker not reachable in normal flow
   5.5-5-lock-epic-6-workstation-acs: backlog       # Origin: Epic 5 retro AI5 (High); 10/45/45 ACs + PWA manifest ACs + Render URL in stories
   5.5-6-add-ci-lint-pipeline: ready-for-dev        # Origin: 5.5-1 code-review M4; wire npm run lint + npm test into GitHub Actions on PR to main
+  5.5-7-network-polish: review                     # Origin: 5.5-2 party-mode; remove @expo/ngrok dead weight + add retry/backoff in lib/api.ts
   epic-5.5-retrospective: optional
 
   # Epic 6: Platform & PWA (10 stories)

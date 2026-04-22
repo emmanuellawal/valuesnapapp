@@ -2,7 +2,7 @@
 
 **Date:** April 18, 2026
 **Epic Duration:** Estimated 2–3 days
-**Stories:** 6
+**Stories:** 7
 **Dependencies:** Epic 5 ✅ Complete
 
 ---
@@ -37,6 +37,8 @@ All five stories are scoped small (30 min – half day each). No new features be
 | 7 | Settings safe-area offset and mobile scrollbar visible | Epic 5 retro · AI4 | Medium / Polish | 5.5-3 |
 | 8 | Epic 6 workstation ACs not locked in story format | Epic 5 retro · AI5 | High / Planning | 5.5-5 |
 | 9 | `npm run lint` gate is local-only — no CI enforces it on PR merge | 5.5-1 code-review M4 | Medium / Process | 5.5-6 |
+| 10 | `@expo/ngrok` + patch machinery still in repo despite tunnel being abandoned | 5.5-2 party-mode | Low / Cleanup | 5.5-7 |
+| 11 | `lib/api.ts::appraise()` has no retry/backoff — transient Wi-Fi blips surface as hard errors | 5.5-2 party-mode | Medium / UX | 5.5-7 |
 
 ---
 
@@ -49,11 +51,12 @@ All five stories are scoped small (30 min – half day each). No new features be
 5.5-4  Restore gallery picker       ─── depends on 5.5-1 (runs under checklist)
 5.5-5  Lock Epic 6 ACs              ─── depends on 5.5-2 (Render URL needed for AC reference)
 5.5-6  Add CI lint pipeline         ─── depends on 5.5-1 (lint script must exist before CI runs it)
+5.5-7  Network polish               ─── depends on 5.5-2 (tunnel only goes away once LAN/WSL path is proven)
 
 Recommended execution order:
   Phase 1 (day 1):  5.5-1 + 5.5-2 in parallel
   Phase 2 (day 2):  5.5-3 + 5.5-4 + 5.5-6 in parallel (after 5.5-1)
-  Phase 3 (day 3):  5.5-5 (after 5.5-2 gives a confirmed Render URL)
+  Phase 3 (day 3):  5.5-5 (after 5.5-2 gives a confirmed Render URL); 5.5-7 runs in parallel
 ```
 
 ---
@@ -351,6 +354,28 @@ Once 5.5-2 is done, record the Render API URL in `docs/deployment/README.md` and
 
 ---
 
+### Story 5.5-7: Network Polish — Remove Tunnel Dead Weight + Retry/Backoff
+
+**Origin:** 5.5-2 party-mode post-mortem
+**Category:** Cleanup + UX resilience
+**Estimate:** 45–75 min
+
+**Problem (two small items bundled):**
+
+1. `@expo/ngrok` dep + `patch-expo-ngrok.cjs` postinstall + `expo-ngrok-v3.cjs` shim exist to patch a tunnel workflow that is no longer used (LAN/WSL now cover device testing). Every @expo/ngrok bump would need the patch re-verified — maintenance tax we don't need.
+2. `apps/mobile/lib/api.ts::appraise()` uses raw `fetch()` with no timeout, no retry, no backoff. Transient network blips (captive portal, cellular handoff, Cloudflare edge 502) surface immediately as `NETWORK_ERROR`.
+
+**What's Needed:**
+
+- Delete `@expo/ngrok`, `scripts/patch-expo-ngrok.cjs`, `scripts/expo-ngrok-v3.cjs`, and the `postinstall` / `patch:expo-ngrok` / `start:tunnel` / `ios:tunnel` entries from `package.json`.
+- Add a `fetchWithRetry` helper: per-attempt `AbortController` timeout (30 s), 2 retries max, exponential backoff (1 s → 3 s), retries only on fetch errors + HTTP 502/503/504.
+- Refactor `appraise()` to use it; `AppraiseError` surface unchanged.
+- Unit-test the retry matrix (network error, 503, 400, 429, terminal failure).
+
+See `docs/sprint-artifacts/5.5-7-network-polish.md` for full AC list and Dev Notes (including idempotency caveat and rationale for 2-retry / 30-s-timeout choice).
+
+---
+
 ## Epic 5.5 Exit Criteria
 
 Epic 6 (`epic-6: in-progress`) must not begin until all of the following are true:
@@ -379,4 +404,5 @@ Epic 6 (`epic-6: in-progress`) must not begin until all of the following are tru
 | 5.5-4 Restore gallery picker | Feature gap | 1–2 hrs |
 | 5.5-5 Lock Epic 6 workstation ACs | Planning | 30–45 min |
 | 5.5-6 Add CI lint pipeline | Process / Infra | 15–30 min |
-| **Total** | | **~5.5–9.5 hours** |
+| 5.5-7 Network polish | Cleanup + UX | 45–75 min |
+| **Total** | | **~6.5–11 hours** |

@@ -1,11 +1,10 @@
 /**
  * Tests for lib/api.ts
- * Story 3.2, AC7
+ * Stories: 3.2 (AC7), 5.5-7 (retry/backoff matrix)
  */
 
-import { appraise, AppraiseError } from '@/lib/api';
+import { appraise, AppraiseError, fetchWithRetry } from '@/lib/api';
 
-// Mock env module
 jest.mock('@/lib/env', () => ({
   env: {
     apiUrl: 'http://test-api.local',
@@ -13,11 +12,11 @@ jest.mock('@/lib/env', () => ({
   },
 }));
 
-// Save original fetch
 const originalFetch = global.fetch;
 
 afterEach(() => {
   global.fetch = originalFetch;
+  jest.useRealTimers();
 });
 
 describe('appraise', () => {
@@ -47,15 +46,26 @@ describe('appraise', () => {
         }),
       }),
     );
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  it('throws NETWORK_ERROR on fetch failure', async () => {
+  it('throws NETWORK_ERROR after exhausting retries on fetch failure', async () => {
+    jest.useFakeTimers();
     global.fetch = jest.fn().mockRejectedValue(new TypeError('Failed to fetch'));
 
-    await expect(appraise('data', 'guest')).rejects.toThrow(AppraiseError);
-    await expect(appraise('data', 'guest')).rejects.toMatchObject({
+    const promise = appraise('data', 'guest');
+    // Catch unhandled-rejection noise while we advance timers.
+    const assertion = expect(promise).rejects.toMatchObject({
       errorType: 'NETWORK_ERROR',
     });
+
+    // Drain first backoff (1 s) and second backoff (3 s).
+    await jest.advanceTimersByTimeAsync(1_000);
+    await jest.advanceTimersByTimeAsync(3_000);
+
+    await assertion;
+    // 1 initial attempt + 2 retries
+    expect(global.fetch).toHaveBeenCalledTimes(3);
   });
 
   it('maps HTTP 422 with AI error code to AI_IDENTIFICATION_FAILED', async () => {
@@ -72,9 +82,10 @@ describe('appraise', () => {
     await expect(appraise('data', 'guest')).rejects.toMatchObject({
       errorType: 'AI_IDENTIFICATION_FAILED',
     });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  it('maps HTTP 429 to RATE_LIMIT', async () => {
+  it('maps HTTP 429 to RATE_LIMIT without retrying', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
       status: 429,
@@ -84,6 +95,7 @@ describe('appraise', () => {
     await expect(appraise('data', 'guest')).rejects.toMatchObject({
       errorType: 'RATE_LIMIT',
     });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   it('maps unknown error codes to GENERIC_ERROR', async () => {
@@ -102,7 +114,6 @@ describe('appraise', () => {
   });
 
   it('throws GENERIC_ERROR when apiUrl is not configured', async () => {
-    // Override env for this test
     const envModule = require('@/lib/env');
     const original = envModule.env.apiUrl;
     envModule.env.apiUrl = undefined;
@@ -112,5 +123,66 @@ describe('appraise', () => {
     });
 
     envModule.env.apiUrl = original;
+  });
+});
+
+describe('fetchWithRetry', () => {
+  // Use tiny backoff so the retry matrix runs with real timers in <50 ms.
+  const fastOpts = { backoffBaseMs: 1, backoffFactor: 1, retries: 2 };
+
+  it('retries on network error, then succeeds', async () => {
+    const mock = jest
+      .fn()
+      .mockRejectedValueOnce(new TypeError('net down'))
+      .mockResolvedValueOnce({ ok: true, status: 200 });
+    global.fetch = mock as unknown as typeof fetch;
+
+    const response = await fetchWithRetry('http://x', { method: 'GET' }, fastOpts);
+
+    expect(response.status).toBe(200);
+    expect(mock).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries on 503, then succeeds', async () => {
+    const mock = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 503 })
+      .mockResolvedValueOnce({ ok: true, status: 200 });
+    global.fetch = mock as unknown as typeof fetch;
+
+    const response = await fetchWithRetry('http://x', { method: 'GET' }, fastOpts);
+
+    expect(response.status).toBe(200);
+    expect(mock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does NOT retry on 400', async () => {
+    const mock = jest.fn().mockResolvedValue({ ok: false, status: 400 });
+    global.fetch = mock as unknown as typeof fetch;
+
+    const response = await fetchWithRetry('http://x', { method: 'GET' }, fastOpts);
+
+    expect(response.status).toBe(400);
+    expect(mock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT retry on 429 (retrying would worsen rate-limit)', async () => {
+    const mock = jest.fn().mockResolvedValue({ ok: false, status: 429 });
+    global.fetch = mock as unknown as typeof fetch;
+
+    const response = await fetchWithRetry('http://x', { method: 'GET' }, fastOpts);
+
+    expect(response.status).toBe(429);
+    expect(mock).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws terminal error after exhausting retries', async () => {
+    const mock = jest.fn().mockRejectedValue(new TypeError('keeps failing'));
+    global.fetch = mock as unknown as typeof fetch;
+
+    await expect(
+      fetchWithRetry('http://x', { method: 'GET' }, fastOpts),
+    ).rejects.toThrow('keeps failing');
+    expect(mock).toHaveBeenCalledTimes(3);
   });
 });
