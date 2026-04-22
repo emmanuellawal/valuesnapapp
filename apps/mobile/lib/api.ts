@@ -35,7 +35,7 @@ export interface FetchWithRetryOptions {
   retries?: number;
   /** Base backoff delay in ms. Multiplied by factor^attempt. */
   backoffBaseMs?: number;
-  /** Exponential factor. Default 3 → delays 1s, 3s, 9s... */
+  /** Exponential factor. Default 3 → delays 1s, 3s between attempts (with default retries=2). */
   backoffFactor?: number;
 }
 
@@ -72,8 +72,6 @@ export async function fetchWithRetry(
     backoffFactor = 3,
   } = options;
 
-  let lastError: unknown = new Error('fetchWithRetry: no attempts made');
-
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -90,7 +88,6 @@ export async function fetchWithRetry(
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
-      lastError = error;
       if (attempt >= retries) {
         throw error;
       }
@@ -98,7 +95,9 @@ export async function fetchWithRetry(
     }
   }
 
-  throw lastError;
+  // Unreachable: loop always returns or throws before exit.
+  // Exists only to satisfy TypeScript's exhaustive-return check.
+  throw new Error('fetchWithRetry: exhausted attempts');
 }
 
 /**

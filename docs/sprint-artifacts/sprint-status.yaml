@@ -142,7 +142,7 @@ development_status:
   5.5-4-restore-gallery-picker: backlog            # Origin: Epic 5 retro AI2 (High); FR2 gap — library picker not reachable in normal flow
   5.5-5-lock-epic-6-workstation-acs: backlog       # Origin: Epic 5 retro AI5 (High); 10/45/45 ACs + PWA manifest ACs + Render URL in stories
   5.5-6-add-ci-lint-pipeline: ready-for-dev        # Origin: 5.5-1 code-review M4; wire npm run lint + npm test into GitHub Actions on PR to main
-  5.5-7-network-polish: review                     # Origin: 5.5-2 party-mode; remove @expo/ngrok dead weight + add retry/backoff in lib/api.ts
+  5.5-7-network-polish: done                       # Origin: 5.5-2 party-mode; remove @expo/ngrok dead weight + add retry/backoff in lib/api.ts
   epic-5.5-retrospective: optional
 
   # Epic 6: Platform & PWA (10 stories)

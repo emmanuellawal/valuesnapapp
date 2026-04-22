@@ -72,7 +72,7 @@ Since the API is now public, **do not** use `expo start --tunnel` for device tes
 
 - **macOS / native Linux:** `npm run start:lan` (or `npm run ios:lan`). Phone and dev laptop on same Wi-Fi — no TLS, no ngrok.
 - **WSL2 on Windows:** see the WSL subsection below — the default `--lan` binds Metro to WSL's virtual NIC (172.x.x.x), which is **not** routable from your phone.
-- Only fall back to `start:tunnel` if LAN is impossible (corporate Wi-Fi client-isolation, different networks). Expect to hit the ngrok-free.dev interstitial that breaks Expo Go's WSS upgrade on iOS.
+- **No tunnel option.** `start:tunnel` and `ios:tunnel` were removed in Story 5.5-7. The ngrok-free.dev interstitial breaks Expo Go's WSS upgrade on iOS; since the backend is on Render, tunnelling Metro is no longer useful. For off-network testing use an EAS update channel instead.
 
 #### WSL2 setup — pick one
 

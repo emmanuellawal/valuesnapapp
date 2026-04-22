@@ -156,6 +156,19 @@ describe('fetchWithRetry', () => {
     expect(mock).toHaveBeenCalledTimes(2);
   });
 
+  it('retries on 502, then succeeds', async () => {
+    const mock = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 502 })
+      .mockResolvedValueOnce({ ok: true, status: 200 });
+    global.fetch = mock as unknown as typeof fetch;
+
+    const response = await fetchWithRetry('http://x', { method: 'GET' }, fastOpts);
+
+    expect(response.status).toBe(200);
+    expect(mock).toHaveBeenCalledTimes(2);
+  });
+
   it('does NOT retry on 400', async () => {
     const mock = jest.fn().mockResolvedValue({ ok: false, status: 400 });
     global.fetch = mock as unknown as typeof fetch;
@@ -184,5 +197,42 @@ describe('fetchWithRetry', () => {
       fetchWithRetry('http://x', { method: 'GET' }, fastOpts),
     ).rejects.toThrow('keeps failing');
     expect(mock).toHaveBeenCalledTimes(3);
+  });
+
+  it('aborts the in-flight request after per-attempt timeout fires', async () => {
+    jest.useFakeTimers();
+
+    // Mock fetch that hangs until the AbortSignal fires.
+    const mock = jest.fn().mockImplementation(
+      (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = (init as RequestInit)?.signal as AbortSignal | undefined;
+          signal?.addEventListener('abort', () =>
+            reject(new Error('AbortError')),
+          );
+        }),
+    );
+    global.fetch = mock as unknown as typeof fetch;
+
+    const promise = fetchWithRetry('http://x', { method: 'GET' }, {
+      timeoutMs: 500,
+      retries: 0,
+      backoffBaseMs: 1,
+      backoffFactor: 1,
+    });
+
+    // Register the assertion BEFORE advancing timers so the rejection is
+    // handled before Jest's unhandled-rejection detector sees it.
+    const assertion = expect(promise).rejects.toThrow('AbortError');
+
+    // Fire the 500 ms abort timer — AbortController.abort() fires, the mock
+    // fetch rejects, and fetchWithRetry re-throws (retries=0).
+    await jest.advanceTimersByTimeAsync(500);
+
+    await assertion;
+    expect(mock).toHaveBeenCalledTimes(1);
+    // Verify the signal was passed through to fetch.
+    const calledInit = mock.mock.calls[0][1] as RequestInit;
+    expect(calledInit.signal).toBeDefined();
   });
 });
