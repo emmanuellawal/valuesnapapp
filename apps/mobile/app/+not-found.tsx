@@ -38,3 +38,4 @@ const styles = StyleSheet.create({
     color: '#2e78b7',
   },
 });
+var _ciGateTest = 1;
