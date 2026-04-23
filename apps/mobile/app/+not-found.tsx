@@ -18,6 +18,8 @@ export default function NotFoundScreen() {
   );
 }
 
+var _ciGateTest = 1; // throwaway: verify CI gate — delete this branch after PR closes
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
