@@ -1,10 +1,14 @@
-import * as FileSystem from 'expo-file-system';
+// Mirror the production import path exactly. If lib/storage.ts ever drifts
+// back to the bare `expo-file-system` (where EncodingType is undefined), this
+// mock will not be applied and the test will crash with the real-world error.
+// See Story 5.5-8.
+import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 
 import { uploadListingPhoto } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 
-jest.mock('expo-file-system', () => ({
+jest.mock('expo-file-system/legacy', () => ({
   readAsStringAsync: jest.fn(),
   EncodingType: { Base64: 'base64' },
 }));
