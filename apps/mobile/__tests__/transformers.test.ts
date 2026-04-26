@@ -372,7 +372,7 @@ describe('transformValuationResponse', () => {
     ).toBe('LOW');
   });
 
-  it('prefers the per-valuation confidence when both shapes are present (HIGH-3 regression)', () => {
+  it('prefers the canonical top-level confidence when both shapes are present (HIGH-3 follow-up)', () => {
     expect(
       transformValuationResponse({
         ...fullResponse,
@@ -385,7 +385,7 @@ describe('transformValuationResponse', () => {
           market_confidence: 'LOW',
         },
       }).marketData.confidence
-    ).toBe('HIGH');
+    ).toBe('LOW');
   });
 
   it('does not crash when the backend omits the confidence payload entirely (HIGH-4 regression)', () => {

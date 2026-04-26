@@ -58,6 +58,8 @@ Set in the dashboard — **names only**; copy values from your local `backend/.e
 | `SUPABASE_SERVICE_KEY` | Backend only — not the anon key |
 | `CORS_ORIGINS` | Optional — if unset, server uses `allow_origins=["*"]` (see `backend/main.py`). For exact origins only; no `https://*.example.com` wildcards in the list (Starlette matches origins literally). |
 
+**First-time blueprint bootstrap:** `sync: false` protects dashboard-managed secrets from being overwritten; it does **not** create values on a brand-new service. Before the first deploy or blueprint sync for a new Render service, set `OPENAI_API_KEY`, `EBAY_PROD_APP_ID`, `EBAY_PROD_CERT_ID`, `SUPABASE_URL`, and `SUPABASE_SERVICE_KEY` in the dashboard. Otherwise the service can deploy successfully but fail real appraisals because the credentials are blank.
+
 **Dashboard drift caveat:** `render.yaml` locks build/start/rootDir and the three non-secret vars (`PYTHON_VERSION`, `USE_MOCK`, `EBAY_USE_SANDBOX`) but only **declares** the secrets above with `sync: false`. Render does not validate that secret values match between the blueprint declaration and the dashboard — if someone toggles `USE_MOCK=true` in the dashboard for debugging and forgets to revert, prod silently switches to mock mode with no git trace. Treat dashboard edits as a PR-equivalent change and document them in the relevant story's Change Log.
 
 ### Mobile app
@@ -65,9 +67,12 @@ Set in the dashboard — **names only**; copy values from your local `backend/.e
 Set in `apps/mobile/.env` (gitignored — copy from `apps/mobile/.env.render`):
 
 ```
-EXPO_PUBLIC_API_URL=https://valuesnapapp.onrender.com
-EXPO_PUBLIC_USE_MOCK=false
+# Uncomment only when intentionally testing against live Render APIs.
+# EXPO_PUBLIC_API_URL=https://valuesnapapp.onrender.com
+# EXPO_PUBLIC_USE_MOCK=false
 ```
+
+`EXPO_PUBLIC_USE_MOCK=false` routes mobile appraisals to real OpenAI/eBay/Render paths. Leave it commented or set mock mode for local UI-only work.
 
 ### Running on a physical device — use LAN, not tunnel
 

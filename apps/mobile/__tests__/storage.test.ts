@@ -40,6 +40,14 @@ describe('uploadListingPhoto', () => {
     });
   });
 
+  it('uses a real legacy FileSystem export that includes EncodingType.Base64', () => {
+    const realFileSystem = jest.requireActual<typeof import('expo-file-system/legacy')>(
+      'expo-file-system/legacy',
+    );
+
+    expect(realFileSystem.EncodingType.Base64).toBe('base64');
+  });
+
   it('reads the local file as base64 using FileSystem.readAsStringAsync', async () => {
     mockReadAsStringAsync.mockResolvedValueOnce('base64data');
     mockUpload.mockResolvedValueOnce({ data: { path: 'user-1/val-1.jpg' }, error: null });

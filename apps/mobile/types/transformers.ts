@@ -191,6 +191,7 @@ export function transformItemDetails(raw: RawItemIdentity): ItemDetails {
 export function transformMarketData(
   raw: RawMarketData,
   confidenceFallback: ConfidenceLevel = 'LOW',
+  confidenceOverride?: ConfidenceLevel,
 ): MarketData {
   const priceRange: PriceRange | undefined = raw.price_range
     ? { min: raw.price_range.min, max: raw.price_range.max }
@@ -207,7 +208,7 @@ export function transformMarketData(
     mean: raw.mean,
     stdDev: raw.std_dev,
     avgDaysToSell: raw.avg_days_to_sell,
-    confidence: parseConfidence(raw.confidence, confidenceFallback),
+    confidence: confidenceOverride ?? parseConfidence(raw.confidence, confidenceFallback),
     message: raw.message,
   };
 }
@@ -254,9 +255,10 @@ export function transformConfidenceData(raw: RawConfidenceData | null | undefine
  * Keys match actual backend response: identity, valuation, confidence, valuation_id.
  *
  * Contract notes (see 5.5-2 code review):
- * - `raw.valuation.confidence` is the legacy per-valuation confidence and is
- *   honored when present. When absent (current live Render shape), the
- *   top-level `raw.confidence.market_confidence` acts as fallback.
+ * - `raw.confidence.market_confidence` is the canonical live Render shape.
+ *   It wins over legacy `raw.valuation.confidence` when both are present.
+ *   The legacy per-valuation field is only used when the top-level field is
+ *   absent.
  * - `raw.confidence` itself may be null/missing; `transformConfidenceData`
  *   guards the nested access and returns safe defaults.
  */
@@ -267,10 +269,17 @@ export function transformValuationResponse(raw: {
   valuation_id?: string | null;
 }): ValuationResponse {
   const confidence = transformConfidenceData(raw.confidence);
+  const canonicalMarketConfidence = raw.confidence?.market_confidence
+    ? confidence.marketConfidence
+    : undefined;
 
   return {
     itemDetails: transformItemDetails(raw.identity),
-    marketData: transformMarketData(raw.valuation, confidence.marketConfidence),
+    marketData: transformMarketData(
+      raw.valuation,
+      confidence.marketConfidence,
+      canonicalMarketConfidence,
+    ),
     confidence,
     valuationId: raw.valuation_id ?? null,
   };

@@ -43,6 +43,49 @@ describe('ErrorState fallback link onPress (Story 5.5-9)', () => {
     expect(mockOpenBrowser).toHaveBeenCalledWith('https://www.ebay.com/sch/');
   });
 
+  it('opens the fallback URL with window.open on web', async () => {
+    Platform.OS = 'web';
+    const originalWindow = globalThis.window;
+    const openSpy = jest.fn();
+    Object.defineProperty(globalThis, 'window', {
+      value: { ...(originalWindow ?? {}), open: openSpy },
+      configurable: true,
+    });
+
+    let renderer: ReactTestRenderer;
+
+    await act(async () => {
+      renderer = create(
+        <ErrorState
+          errorType="AI_IDENTIFICATION_FAILED"
+          fallbackLink={{
+            text: 'Search eBay manually',
+            href: 'https://www.ebay.com/sch/',
+          }}
+        />,
+      );
+    });
+
+    const link = renderer!.root.findByProps({ accessibilityRole: 'link' });
+
+    await act(async () => {
+      link.props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://www.ebay.com/sch/',
+      '_blank',
+      'noopener,noreferrer',
+    );
+    expect(mockOpenBrowser).not.toHaveBeenCalled();
+
+    Object.defineProperty(globalThis, 'window', {
+      value: originalWindow,
+      configurable: true,
+    });
+  });
+
   it('does not surface an unhandled rejection when openBrowserAsync rejects', async () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     mockOpenBrowser.mockRejectedValueOnce(new Error('User cancelled'));
