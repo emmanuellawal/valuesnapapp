@@ -1,3 +1,6 @@
+# Render Blueprint — locks build/start/rootDir + declares which env vars are
+# dashboard-managed so drift stays visible. See docs/deployment/README.md for
+# the full env var reference and the dashboard-drift note.
 services:
   - type: web
     name: valuesnapapp-backend
@@ -7,9 +10,30 @@ services:
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
+      # Pinned in this blueprint — changing these requires a PR.
       - key: PYTHON_VERSION
         value: "3.11.9"
       - key: USE_MOCK
         value: "false"
       - key: EBAY_USE_SANDBOX
         value: "false"
+
+      # Dashboard-managed secrets. `sync: false` tells Render NOT to overwrite
+      # the existing dashboard values on blueprint sync, so a local apply never
+      # wipes prod keys. The fields are listed here purely to document that
+      # they exist and are mandatory — values live only in the dashboard.
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: EBAY_PROD_APP_ID
+        sync: false
+      - key: EBAY_PROD_CERT_ID
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      # Optional override of the vision model. Unset = backend default
+      # (currently gpt-4o-mini in backend/services/ai.py). Leave dashboard-
+      # managed so model upgrades (see Story 5.5-10) do not require a PR.
+      - key: OPENAI_MODEL
+        sync: false

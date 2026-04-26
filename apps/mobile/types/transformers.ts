@@ -52,24 +52,29 @@ interface RawMarketData {
   mean?: number;
   std_dev?: number;
   avg_days_to_sell?: number;
-  confidence: string;
+  confidence?: string;
   message?: string;
 }
 
 /**
  * Raw backend response for confidence data (before transformation).
+ *
+ * All nested fields are marked optional so a partial payload (e.g. the
+ * backend drops `confidence_factors` in a future migration) degrades
+ * gracefully instead of throwing during transformation. See HIGH-4 in the
+ * 5.5-2 code review for context.
  */
 interface RawConfidenceData {
-  market_confidence: string;
-  confidence_factors: {
-    sample_size: number;
-    variance_pct: number;
-    ai_confidence: string;
-    data_source: string;
-    data_source_penalty: boolean;
+  market_confidence?: string;
+  confidence_factors?: {
+    sample_size?: number;
+    variance_pct?: number;
+    ai_confidence?: string;
+    data_source?: string;
+    data_source_penalty?: boolean;
   };
-  ai_only_flag: boolean;
-  confidence_message: string;
+  ai_only_flag?: boolean;
+  confidence_message?: string;
 }
 
 /**
@@ -123,7 +128,11 @@ function parseVisualCondition(value: string): VisualCondition {
 /**
  * Safely parse confidence level with fallback.
  */
-function parseConfidence(value: string): ConfidenceLevel {
+function parseConfidence(value: string | undefined, fallback: ConfidenceLevel = 'LOW'): ConfidenceLevel {
+  if (!value) {
+    return fallback;
+  }
+
   const upper = value.toUpperCase();
   if (VALID_CONFIDENCE.includes(upper as ConfidenceLevel)) {
     return upper as ConfidenceLevel;
@@ -179,7 +188,10 @@ export function transformItemDetails(raw: RawItemIdentity): ItemDetails {
  * Transform raw backend market data to frontend MarketData.
  * Converts all snake_case to camelCase and validates enums.
  */
-export function transformMarketData(raw: RawMarketData): MarketData {
+export function transformMarketData(
+  raw: RawMarketData,
+  confidenceFallback: ConfidenceLevel = 'LOW',
+): MarketData {
   const priceRange: PriceRange | undefined = raw.price_range
     ? { min: raw.price_range.min, max: raw.price_range.max }
     : undefined;
@@ -195,41 +207,71 @@ export function transformMarketData(raw: RawMarketData): MarketData {
     mean: raw.mean,
     stdDev: raw.std_dev,
     avgDaysToSell: raw.avg_days_to_sell,
-    confidence: parseConfidence(raw.confidence),
+    confidence: parseConfidence(raw.confidence, confidenceFallback),
     message: raw.message,
   };
 }
 
 /**
  * Transform raw backend confidence data to frontend ConfidenceData.
+ *
+ * Defensive: every nested field is optional so a partial/missing payload
+ * (backend migration, cached legacy response, non-200 fallback) cannot
+ * throw here. Missing values fall back to safe defaults and a single
+ * `console.warn` surfaces the upstream contract violation.
  */
-export function transformConfidenceData(raw: RawConfidenceData): ConfidenceData {
+export function transformConfidenceData(raw: RawConfidenceData | null | undefined): ConfidenceData {
+  if (!raw) {
+    console.warn('transformConfidenceData: missing confidence payload, using LOW fallback');
+    return {
+      marketConfidence: 'LOW',
+      aiConfidence: 'LOW',
+      sampleSize: 0,
+      priceVariance: 0,
+      dataSource: 'unknown',
+      dataSourcePenalty: false,
+      aiOnlyFlag: false,
+      message: '',
+    };
+  }
+
+  const factors = raw.confidence_factors ?? {};
+
   return {
     marketConfidence: parseConfidence(raw.market_confidence),
-    aiConfidence: raw.confidence_factors.ai_confidence,
-    sampleSize: raw.confidence_factors.sample_size,
-    priceVariance: raw.confidence_factors.variance_pct,
-    dataSource: raw.confidence_factors.data_source,
-    dataSourcePenalty: raw.confidence_factors.data_source_penalty,
-    aiOnlyFlag: raw.ai_only_flag,
-    message: raw.confidence_message,
+    aiConfidence: factors.ai_confidence ?? 'LOW',
+    sampleSize: factors.sample_size ?? 0,
+    priceVariance: factors.variance_pct ?? 0,
+    dataSource: factors.data_source ?? 'unknown',
+    dataSourcePenalty: factors.data_source_penalty ?? false,
+    aiOnlyFlag: raw.ai_only_flag ?? false,
+    message: raw.confidence_message ?? '',
   };
 }
 
 /**
  * Transform a complete valuation response from the backend.
  * Keys match actual backend response: identity, valuation, confidence, valuation_id.
+ *
+ * Contract notes (see 5.5-2 code review):
+ * - `raw.valuation.confidence` is the legacy per-valuation confidence and is
+ *   honored when present. When absent (current live Render shape), the
+ *   top-level `raw.confidence.market_confidence` acts as fallback.
+ * - `raw.confidence` itself may be null/missing; `transformConfidenceData`
+ *   guards the nested access and returns safe defaults.
  */
 export function transformValuationResponse(raw: {
   identity: RawItemIdentity;
   valuation: RawMarketData;
-  confidence: RawConfidenceData;
+  confidence: RawConfidenceData | null | undefined;
   valuation_id?: string | null;
 }): ValuationResponse {
+  const confidence = transformConfidenceData(raw.confidence);
+
   return {
     itemDetails: transformItemDetails(raw.identity),
-    marketData: transformMarketData(raw.valuation),
-    confidence: transformConfidenceData(raw.confidence),
+    marketData: transformMarketData(raw.valuation, confidence.marketConfidence),
+    confidence,
     valuationId: raw.valuation_id ?? null,
   };
 }

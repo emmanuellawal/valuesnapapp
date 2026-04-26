@@ -200,6 +200,45 @@ describe('transformConfidenceData', () => {
       message: 'Based on 9 listings',
     });
   });
+
+  it('returns safe defaults when the full payload is null (HIGH-4 regression)', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(transformConfidenceData(null)).toEqual({
+      marketConfidence: 'LOW',
+      aiConfidence: 'LOW',
+      sampleSize: 0,
+      priceVariance: 0,
+      dataSource: 'unknown',
+      dataSourcePenalty: false,
+      aiOnlyFlag: false,
+      message: '',
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      'transformConfidenceData: missing confidence payload, using LOW fallback'
+    );
+    warnSpy.mockRestore();
+  });
+
+  it('falls back to safe defaults when confidence_factors is absent (HIGH-4 regression)', () => {
+    expect(
+      transformConfidenceData({
+        market_confidence: 'MEDIUM',
+        ai_only_flag: true,
+        confidence_message: 'AI-only flag set',
+      })
+    ).toEqual({
+      marketConfidence: 'MEDIUM',
+      aiConfidence: 'LOW',
+      sampleSize: 0,
+      priceVariance: 0,
+      dataSource: 'unknown',
+      dataSourcePenalty: false,
+      aiOnlyFlag: true,
+      message: 'AI-only flag set',
+    });
+  });
 });
 
 describe('transformValuationResponse', () => {
@@ -316,5 +355,61 @@ describe('transformValuationResponse', () => {
         },
       }).marketData.priceRange
     ).toBeUndefined();
+  });
+
+  it('derives market confidence from the top-level confidence payload when valuation omits it', () => {
+    const { confidence: _legacyConfidence, ...liveValuation } = fullResponse.valuation;
+
+    expect(
+      transformValuationResponse({
+        ...fullResponse,
+        valuation: liveValuation,
+        confidence: {
+          ...fullResponse.confidence,
+          market_confidence: 'LOW',
+        },
+      }).marketData.confidence
+    ).toBe('LOW');
+  });
+
+  it('prefers the per-valuation confidence when both shapes are present (HIGH-3 regression)', () => {
+    expect(
+      transformValuationResponse({
+        ...fullResponse,
+        valuation: {
+          ...fullResponse.valuation,
+          confidence: 'HIGH',
+        },
+        confidence: {
+          ...fullResponse.confidence,
+          market_confidence: 'LOW',
+        },
+      }).marketData.confidence
+    ).toBe('HIGH');
+  });
+
+  it('does not crash when the backend omits the confidence payload entirely (HIGH-4 regression)', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { confidence: _legacyConfidence, ...liveValuation } = fullResponse.valuation;
+    const result = transformValuationResponse({
+      ...fullResponse,
+      valuation: liveValuation,
+      confidence: null,
+    });
+
+    expect(result.marketData.confidence).toBe('LOW');
+    expect(result.confidence).toEqual({
+      marketConfidence: 'LOW',
+      aiConfidence: 'LOW',
+      sampleSize: 0,
+      priceVariance: 0,
+      dataSource: 'unknown',
+      dataSourcePenalty: false,
+      aiOnlyFlag: false,
+      message: '',
+    });
+
+    warnSpy.mockRestore();
   });
 });

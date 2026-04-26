@@ -44,11 +44,12 @@ With auto-deploy enabled (default), every push to the connected branch (e.g. `ma
 
 ### Environment variables (Render)
 
-Set in the dashboard — **names only**; copy values from your local `backend/.env` (never commit that file).
+Set in the dashboard — **names only**; copy values from your local `backend/.env` (never commit that file). `render.yaml` declares each variable with `sync: false`, which means the blueprint apply step never overwrites a dashboard value — drift can still happen if someone edits the dashboard directly without a PR. Audit periodically.
 
 | Variable | Notes |
 |----------|--------|
 | `OPENAI_API_KEY` | Required for real appraisals |
+| `OPENAI_MODEL` | Optional — defaults to `gpt-4o-mini` in `backend/services/ai.py`. See Story 5.5-10 for the model-upgrade evaluation. |
 | `EBAY_PROD_APP_ID` | Production eBay app id (`EBAY_APP_ID` is **wrong** — not read by `config.py`) |
 | `EBAY_PROD_CERT_ID` | Production eBay cert id |
 | `EBAY_USE_SANDBOX` | `false` for real device / prod-like tests |
@@ -56,6 +57,8 @@ Set in the dashboard — **names only**; copy values from your local `backend/.e
 | `SUPABASE_URL` | Same project as mobile |
 | `SUPABASE_SERVICE_KEY` | Backend only — not the anon key |
 | `CORS_ORIGINS` | Optional — if unset, server uses `allow_origins=["*"]` (see `backend/main.py`). For exact origins only; no `https://*.example.com` wildcards in the list (Starlette matches origins literally). |
+
+**Dashboard drift caveat:** `render.yaml` locks build/start/rootDir and the three non-secret vars (`PYTHON_VERSION`, `USE_MOCK`, `EBAY_USE_SANDBOX`) but only **declares** the secrets above with `sync: false`. Render does not validate that secret values match between the blueprint declaration and the dashboard — if someone toggles `USE_MOCK=true` in the dashboard for debugging and forgets to revert, prod silently switches to mock mode with no git trace. Treat dashboard edits as a PR-equivalent change and document them in the relevant story's Change Log.
 
 ### Mobile app
 
@@ -70,8 +73,9 @@ EXPO_PUBLIC_USE_MOCK=false
 
 Since the API is now public, **do not** use `expo start --tunnel` for device testing. Tunnels were only needed when Metro AND the backend both had to be reachable by the phone. Now:
 
-- **macOS / native Linux:** `npm run start:lan` (or `npm run ios:lan`). Phone and dev laptop on same Wi-Fi — no TLS, no ngrok.
-- **WSL2 on Windows:** see the WSL subsection below — the default `--lan` binds Metro to WSL's virtual NIC (172.x.x.x), which is **not** routable from your phone.
+- **Supported default path:** from `apps/mobile`, run `npm start`. That now routes through the WSL-aware LAN launcher instead of raw `expo start`, so the QR code cannot silently advertise the wrong interface.
+- **macOS / native Linux:** `npm start` (or `npm run ios`). Phone and dev laptop on the same private Wi-Fi or phone hotspot — no TLS, no ngrok.
+- **WSL2 on Windows:** `npm start` uses the same launcher. In mirrored mode it advertises the Windows LAN IP directly; verify the phone can open `http://<lan-ip>:8083/status` if Expo Go fails. If mirrored mode is unavailable and WSL has a 172.x.x.x address, use `npm run start:wsl`.
 - **No tunnel option.** `start:tunnel` and `ios:tunnel` were removed in Story 5.5-7. The ngrok-free.dev interstitial breaks Expo Go's WSS upgrade on iOS; since the backend is on Render, tunnelling Metro is no longer useful. For off-network testing use an EAS update channel instead.
 
 #### WSL2 setup — pick one
@@ -85,7 +89,9 @@ Requires Windows 11 22H2+ and WSL 2.0+ (check with `wsl --version`). In `%USERPR
 networkingMode=mirrored
 ```
 
-Then `wsl --shutdown` and reopen WSL. Linux now sees the Windows host's real network adapters (your Wi-Fi IP is directly available inside WSL). After that, `npm run start:lan` works with no tricks.
+Then `wsl --shutdown` and reopen WSL. Linux now sees the Windows host's real network adapters (your Wi-Fi IP is directly available inside WSL). If Expo Go fails, verify from the phone browser that `http://<your-lan-ip>:8083/status` responds before debugging the app. iPhone hotspots commonly advertise as `172.20.10.x`; that is a valid LAN address for this workflow, unlike WSL's virtual 172.x.x.x NAT address.
+
+As of the current mobile scripts, `npm start` and `npm run start:lan` are WSL-aware. In mirrored mode they advertise the Windows LAN IP directly. A Windows-host self-probe may fail on some mirrored WSL setups even when the phone route works, so it is warning-only; the phone browser `/status` check is the source of truth. If mirrored networking is not active, the launcher fails fast instead of launching a broken `exp://172.x.x.x:8083` session.
 
 **Option B (fallback): `npm run start:wsl`**
 
@@ -96,7 +102,7 @@ For older WSL, company-managed Windows, or if mirrored mode isn't viable. One-ti
 powershell -ExecutionPolicy Bypass -File apps\mobile\scripts\setup-wsl-portproxy.ps1
 ```
 
-That adds a `netsh portproxy` rule and a firewall allow-rule for port 8083. You only need to re-run it if your WSL IP changes (which happens on reboot unless you use mirrored mode).
+That adds a `netsh portproxy` rule and a firewall allow-rule for port 8083. This fallback is only for classic WSL where the distro has a 172.x.x.x IP. Do not use it in mirrored mode; portproxy can occupy Metro's port and force Expo onto an unforwarded fallback port.
 
 Then from inside WSL:
 
@@ -105,13 +111,19 @@ cd apps/mobile
 npm run start:wsl
 ```
 
-The script auto-detects your Windows LAN IP via `ipconfig.exe`, exports `REACT_NATIVE_PACKAGER_HOSTNAME` so Metro advertises the Windows IP (not WSL's) to Expo Go, and hands off to `expo start --lan`. The QR you scan on your phone will point at `192.168.x.x:8083`.
+The script auto-detects your Windows LAN IP via `ipconfig.exe`, rejects non-routable advertised hosts up front, verifies the Windows portproxy is actually configured, exports `REACT_NATIVE_PACKAGER_HOSTNAME` so Metro advertises the Windows IP (not WSL's) to Expo Go, and hands off to `expo start --lan`. The QR you scan on your phone will point at `192.168.x.x:8083` or `10.x.x.x:8083`, never WSL's virtual NIC.
 
 ### Smoke tests (acceptance)
 
 1. `curl` `/health` — 200 and `{"status":"healthy"}`.
 2. One real appraisal from a device with `EXPO_PUBLIC_API_URL` set to the Render URL.
-3. From a browser on `http://localhost:8083`, DevTools console: `fetch('https://<url>/health').then(r => r.json())` — no CORS error when `CORS_ORIGINS` is unset (wildcard allowed).
+3. CORS check from the browser. Two equivalent paths — either is sufficient evidence:
+   - **Curl probe (CI-friendly):** `curl -I -H "Origin: http://localhost:8083" https://valuesnapapp.onrender.com/health` — response headers must include `access-control-allow-origin: http://localhost:8083`.
+   - **DevTools probe (manual):** with `npm run web` running, open `http://localhost:8083`, paste into the console:
+     ```js
+     fetch('https://valuesnapapp.onrender.com/health').then(r => r.json()).then(console.log)
+     ```
+     Expected: `{ status: 'healthy' }` logged, zero CORS errors in the console. Both probes exercise the same `CORSMiddleware` response path; the curl version is preferred for repeated automated checks.
 4. `curl https://valuesnapapp.onrender.com/admin/api-stats` — the `cache_stats` key must be a count object, **not** `{"error":"[Errno -2] Name or service not known"}`. That error means Supabase env vars on Render are misconfigured (URL typo, missing, or service key wrong) — appraisals will silently return `valuation_id: null` and history/migration will be broken.
 
 ---
