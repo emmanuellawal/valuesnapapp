@@ -1,5 +1,6 @@
 import React from 'react';
-import { Linking, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 
 import { Stack, Text, SwissPressable } from '@/components/primitives';
 import { buildEbaySoldSearchUrl } from '@/lib/utils';
@@ -30,15 +31,24 @@ export interface ConfidenceWarningProps {
 
 /**
  * Opens a URL in the appropriate browser/app.
+ *
+ * Native uses `WebBrowser.openBrowserAsync` (Safari View Controller on iOS,
+ * Chrome Custom Tab on Android) instead of `Linking.openURL`, which has
+ * known edge cases in Expo Go where `openURL` rejects even after
+ * `canOpenURL` resolves true. See Story 5.5-9.
+ *
+ * Internally catches its own rejections so a system-level failure surfaces
+ * as a `console.warn`, never as an unhandled promise rejection.
  */
 async function openUrl(url: string): Promise<void> {
-  if (Platform.OS === 'web') {
-    window.open(url, '_blank', 'noopener,noreferrer');
-  } else {
-    const canOpen = await Linking.canOpenURL(url);
-    if (canOpen) {
-      await Linking.openURL(url);
+  try {
+    if (Platform.OS === 'web') {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      await WebBrowser.openBrowserAsync(url);
     }
+  } catch (error) {
+    console.warn('openUrl failed:', error);
   }
 }
 
@@ -109,7 +119,9 @@ export function ConfidenceWarning({
       
       {/* Verification link */}
       <SwissPressable 
-        onPress={() => openUrl(ebayUrl)}
+        onPress={() => {
+          openUrl(ebayUrl).catch((e) => console.warn('confidence-warning onPress', e));
+        }}
         accessibilityLabel="Verify sold prices on eBay (opens in new tab)"
         accessibilityRole="link"
       >

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Linking, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 
 import { Box, Stack, Text, SwissPressable } from '@/components/primitives';
 
@@ -100,15 +101,24 @@ export interface ErrorStateProps {
 
 /**
  * Opens a URL in the appropriate browser/app.
+ *
+ * Native uses `WebBrowser.openBrowserAsync` (Safari View Controller on iOS,
+ * Chrome Custom Tab on Android) instead of `Linking.openURL`, which has
+ * known edge cases in Expo Go where `openURL` rejects even after
+ * `canOpenURL` resolves true. See Story 5.5-9.
+ *
+ * Internally catches its own rejections so a system-level failure surfaces
+ * as a `console.warn`, never as an unhandled promise rejection.
  */
 async function openUrl(url: string): Promise<void> {
-  if (Platform.OS === 'web') {
-    window.open(url, '_blank', 'noopener,noreferrer');
-  } else {
-    const canOpen = await Linking.canOpenURL(url);
-    if (canOpen) {
-      await Linking.openURL(url);
+  try {
+    if (Platform.OS === 'web') {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      await WebBrowser.openBrowserAsync(url);
     }
+  } catch (error) {
+    console.warn('openUrl failed:', error);
   }
 }
 
@@ -200,7 +210,9 @@ export function ErrorState({
         {/* Fallback link - secondary action */}
         {fallbackLink && (
           <SwissPressable 
-            onPress={() => openUrl(fallbackLink.href)}
+            onPress={() => {
+              openUrl(fallbackLink.href).catch((e) => console.warn('fallbackLink onPress', e));
+            }}
             accessibilityLabel={`${fallbackLink.text} (opens in new tab)`}
             accessibilityRole="link"
           >
