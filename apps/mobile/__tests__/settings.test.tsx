@@ -4,6 +4,7 @@ import { act, create, ReactTestRenderer } from 'react-test-renderer';
 
 jest.mock('expo-router', () => ({
   router: { replace: jest.fn(), push: jest.fn() },
+  useFocusEffect: jest.fn(),
 }));
 
 jest.mock('expo-constants', () => ({
@@ -15,12 +16,45 @@ jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(),
 }));
 
+jest.mock('@/lib/preferences', () => ({
+  getTheme: jest.fn(),
+  saveTheme: jest.fn(),
+  getNotifications: jest.fn(),
+  saveNotifications: jest.fn(),
+  getCurrency: jest.fn(),
+  saveCurrency: jest.fn(),
+}));
+
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaInsetsContext: require('react').createContext({
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  }),
+}));
+
 import SettingsScreen from '../app/(tabs)/settings';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  getTheme,
+  saveTheme,
+  getNotifications,
+  saveNotifications,
+  getCurrency,
+  saveCurrency,
+} from '@/lib/preferences';
 
 const mockRouter = router as jest.Mocked<typeof router>;
 const mockUseAuth = useAuth as jest.Mock;
+const mockUseFocusEffect = useFocusEffect as jest.Mock;
+const mockGetTheme = getTheme as jest.MockedFunction<typeof getTheme>;
+const mockSaveTheme = saveTheme as jest.MockedFunction<typeof saveTheme>;
+const mockGetNotifications = getNotifications as jest.MockedFunction<typeof getNotifications>;
+const mockSaveNotifications = saveNotifications as jest.MockedFunction<typeof saveNotifications>;
+const mockGetCurrency = getCurrency as jest.MockedFunction<typeof getCurrency>;
+const mockSaveCurrency = saveCurrency as jest.MockedFunction<typeof saveCurrency>;
 
 function authenticatedAuth(overrides = {}) {
   return {
@@ -60,14 +94,26 @@ function guestAuth() {
 
 describe('SettingsScreen — Story 4.8', () => {
   let openUrlSpy: jest.SpyInstance;
+  let lastFocusEffect: (() => void | (() => void)) | undefined;
 
   beforeEach(() => {
     jest.clearAllMocks();
     openUrlSpy = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    mockGetTheme.mockResolvedValue('system');
+    mockSaveTheme.mockResolvedValue();
+    mockGetNotifications.mockResolvedValue('off');
+    mockSaveNotifications.mockResolvedValue();
+    mockGetCurrency.mockResolvedValue('USD');
+    mockSaveCurrency.mockResolvedValue();
+    mockUseFocusEffect.mockImplementation((callback) => {
+      lastFocusEffect = callback;
+      React.useEffect(() => callback(), [callback]);
+    });
   });
 
   afterEach(() => {
     openUrlSpy.mockRestore();
+    lastFocusEffect = undefined;
   });
 
   async function renderScreen() {
@@ -75,6 +121,10 @@ describe('SettingsScreen — Story 4.8', () => {
 
     await act(async () => {
       renderer = create(<SettingsScreen />);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
     });
 
     return renderer!;
@@ -185,5 +235,130 @@ describe('SettingsScreen — Story 4.8', () => {
 
     expect(signInMethodRow.props.onPress).toBeUndefined();
     expect(versionRow.props.onPress).toBeUndefined();
+  });
+
+  it('loads persisted preference values when the screen gains focus', async () => {
+    mockUseAuth.mockReturnValue(authenticatedAuth());
+    mockGetTheme.mockResolvedValue('light');
+    mockGetNotifications.mockResolvedValue('on');
+    mockGetCurrency.mockResolvedValue('EUR');
+
+    const renderer = await renderScreen();
+
+    expect(renderer.root.findByProps({ children: 'Light' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'On' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'EUR' })).toBeTruthy();
+  });
+
+  it('re-reads persisted preference values on a later focus event', async () => {
+    mockUseAuth.mockReturnValue(authenticatedAuth());
+    mockGetTheme.mockResolvedValueOnce('system').mockResolvedValueOnce('dark');
+    mockGetNotifications.mockResolvedValueOnce('off').mockResolvedValueOnce('on');
+    mockGetCurrency.mockResolvedValueOnce('USD').mockResolvedValueOnce('GBP');
+
+    const renderer = await renderScreen();
+
+    expect(renderer.root.findByProps({ children: 'System' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'Off' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'USD' })).toBeTruthy();
+
+    await act(async () => {
+      lastFocusEffect?.();
+      await Promise.resolve();
+    });
+
+    expect(renderer.root.findByProps({ children: 'Dark' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'On' })).toBeTruthy();
+    expect(renderer.root.findByProps({ children: 'GBP' })).toBeTruthy();
+  });
+
+  it('cycles theme and persists the next value when pressed', async () => {
+    mockUseAuth.mockReturnValue(authenticatedAuth());
+
+    const renderer = await renderScreen();
+    const themeButton = renderer.root.findByProps({ testID: 'settings-theme-button' });
+
+    await act(async () => {
+      themeButton.props.onPress();
+    });
+
+    expect(mockSaveTheme).toHaveBeenCalledWith('light');
+    expect(renderer.root.findByProps({ children: 'Light' })).toBeTruthy();
+  });
+
+  it('wraps theme from dark back to system when pressed', async () => {
+    mockUseAuth.mockReturnValue(authenticatedAuth());
+    mockGetTheme.mockResolvedValue('dark');
+
+    const renderer = await renderScreen();
+    const themeButton = renderer.root.findByProps({ testID: 'settings-theme-button' });
+
+    await act(async () => {
+      themeButton.props.onPress();
+    });
+
+    expect(mockSaveTheme).toHaveBeenCalledWith('system');
+    expect(renderer.root.findByProps({ children: 'System' })).toBeTruthy();
+  });
+
+  it('toggles notifications and persists the next value when pressed', async () => {
+    mockUseAuth.mockReturnValue(authenticatedAuth());
+
+    const renderer = await renderScreen();
+    const notificationsButton = renderer.root.findByProps({
+      testID: 'settings-notifications-button',
+    });
+
+    await act(async () => {
+      notificationsButton.props.onPress();
+    });
+
+    expect(mockSaveNotifications).toHaveBeenCalledWith('on');
+    expect(renderer.root.findByProps({ children: 'On' })).toBeTruthy();
+  });
+
+  it('cycles currency and persists the next value when pressed', async () => {
+    mockUseAuth.mockReturnValue(authenticatedAuth());
+
+    const renderer = await renderScreen();
+    const currencyButton = renderer.root.findByProps({ testID: 'settings-currency-button' });
+
+    await act(async () => {
+      currencyButton.props.onPress();
+    });
+
+    expect(mockSaveCurrency).toHaveBeenCalledWith('GBP');
+    expect(renderer.root.findByProps({ children: 'GBP' })).toBeTruthy();
+  });
+
+  it('wraps currency from AUD back to USD when pressed', async () => {
+    mockUseAuth.mockReturnValue(authenticatedAuth());
+    mockGetCurrency.mockResolvedValue('AUD');
+
+    const renderer = await renderScreen();
+    const currencyButton = renderer.root.findByProps({ testID: 'settings-currency-button' });
+
+    await act(async () => {
+      currencyButton.props.onPress();
+    });
+
+    expect(mockSaveCurrency).toHaveBeenCalledWith('USD');
+    expect(renderer.root.findByProps({ children: 'USD' })).toBeTruthy();
+  });
+
+  it('describes preference cycling behavior to assistive technology', async () => {
+    mockUseAuth.mockReturnValue(authenticatedAuth());
+
+    const renderer = await renderScreen();
+
+    expect(renderer.root.findByProps({ testID: 'settings-theme-button' }).props.accessibilityHint).toBe(
+      'Cycles between System, Light, and Dark',
+    );
+    expect(
+      renderer.root.findByProps({ testID: 'settings-notifications-button' }).props.accessibilityHint,
+    ).toBe('Toggles notifications on or off');
+    expect(renderer.root.findByProps({ testID: 'settings-currency-button' }).props.accessibilityHint).toBe(
+      'Cycles between USD, GBP, EUR, CAD, and AUD',
+    );
   });
 });

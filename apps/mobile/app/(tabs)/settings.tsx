@@ -1,10 +1,21 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { Linking } from 'react-native';
 import Constants from 'expo-constants';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 import { Box, Stack, Text, SwissPressable, ScreenContainer } from '@/components/primitives';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  getTheme,
+  saveTheme,
+  getNotifications,
+  saveNotifications,
+  getCurrency,
+  saveCurrency,
+  type ThemePreference,
+  type NotificationsPreference,
+  type CurrencyPreference,
+} from '@/lib/preferences';
 
 /**
  * SettingsRow - Swiss Minimalist Design
@@ -17,6 +28,7 @@ function SettingsRow({
   value = '',
   onPress,
   accessibilityLabel,
+  accessibilityHint,
   destructive = false,
   showChevron = true,
   testID,
@@ -25,6 +37,7 @@ function SettingsRow({
   value?: string;
   onPress?: () => void;
   accessibilityLabel: string;
+  accessibilityHint?: string;
   destructive?: boolean;
   showChevron?: boolean;
   testID?: string;
@@ -51,6 +64,7 @@ function SettingsRow({
     return (
       <Box
         accessibilityLabel={accessibilityLabel}
+        accessibilityHint={accessibilityHint}
         className="py-4 bg-paper border-b border-divider"
         testID={testID}
       >
@@ -62,6 +76,7 @@ function SettingsRow({
   return (
     <SwissPressable
       accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
       onPress={onPress}
       className="py-4 bg-paper border-b border-divider"
       testID={testID}
@@ -71,6 +86,23 @@ function SettingsRow({
   );
 }
 
+const THEME_VALUES: readonly ThemePreference[] = ['system', 'light', 'dark'];
+const CURRENCY_VALUES: readonly CurrencyPreference[] = ['USD', 'GBP', 'EUR', 'CAD', 'AUD'];
+
+function getNextValue<T>(values: readonly T[], currentValue: T): T {
+  const currentIndex = values.indexOf(currentValue);
+
+  if (currentIndex === -1 || currentIndex === values.length - 1) {
+    return values[0];
+  }
+
+  return values[currentIndex + 1];
+}
+
+function formatChoicePreferenceValue(value: ThemePreference | NotificationsPreference): string {
+  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+}
+
 /**
  * Settings Screen — Swiss Minimalist Design
  */
@@ -78,6 +110,56 @@ export default function SettingsScreen() {
   const { isGuest, user, session, signOut } = useAuth();
   const signInMethod = session?.user?.app_metadata?.provider === 'google' ? 'Google' : 'Email';
   const appVersion = Constants.expoConfig?.version ?? '1.0.0';
+  const [theme, setTheme] = useState<ThemePreference>('system');
+  const [notifications, setNotifications] = useState<NotificationsPreference>('off');
+  const [currency, setCurrency] = useState<CurrencyPreference>('USD');
+
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+
+      async function loadPreferences() {
+        const [nextTheme, nextNotifications, nextCurrency] = await Promise.all([
+          getTheme(),
+          getNotifications(),
+          getCurrency(),
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setTheme(nextTheme);
+        setNotifications(nextNotifications);
+        setCurrency(nextCurrency);
+      }
+
+      void loadPreferences();
+
+      return () => {
+        isMounted = false;
+      };
+    }, []),
+  );
+
+  const handleThemePress = useCallback(() => {
+    const nextTheme = getNextValue(THEME_VALUES, theme);
+    setTheme(nextTheme);
+    void saveTheme(nextTheme);
+  }, [theme]);
+
+  const handleNotificationsPress = useCallback(() => {
+    const nextNotifications: NotificationsPreference =
+      notifications === 'off' ? 'on' : 'off';
+    setNotifications(nextNotifications);
+    void saveNotifications(nextNotifications);
+  }, [notifications]);
+
+  const handleCurrencyPress = useCallback(() => {
+    const nextCurrency = getNextValue(CURRENCY_VALUES, currency);
+    setCurrency(nextCurrency);
+    void saveCurrency(nextCurrency);
+  }, [currency]);
 
   return (
     <ScreenContainer>
@@ -160,21 +242,30 @@ export default function SettingsScreen() {
         </Text>
         <SettingsRow
           label="Theme"
-          value="System"
+          value={formatChoicePreferenceValue(theme)}
+          onPress={handleThemePress}
           accessibilityLabel="Theme preference"
+          accessibilityHint="Cycles between System, Light, and Dark"
           showChevron={false}
+          testID="settings-theme-button"
         />
         <SettingsRow
           label="Notifications"
-          value="Off"
+          value={formatChoicePreferenceValue(notifications)}
+          onPress={handleNotificationsPress}
           accessibilityLabel="Notification preference"
+          accessibilityHint="Toggles notifications on or off"
           showChevron={false}
+          testID="settings-notifications-button"
         />
         <SettingsRow
           label="Currency"
-          value="USD"
+          value={currency}
+          onPress={handleCurrencyPress}
           accessibilityLabel="Currency preference"
+          accessibilityHint="Cycles between USD, GBP, EUR, CAD, and AUD"
           showChevron={false}
+          testID="settings-currency-button"
         />
       </Box>
 

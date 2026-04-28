@@ -5,20 +5,45 @@ import { act, create, ReactTestRenderer } from 'react-test-renderer';
 
 jest.mock('expo-router', () => ({
   router: { replace: jest.fn(), push: jest.fn() },
+  useFocusEffect: jest.fn(),
 }));
 
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: jest.fn(),
 }));
 
+jest.mock('@/lib/preferences', () => ({
+  getTheme: jest.fn(),
+  saveTheme: jest.fn(),
+  getNotifications: jest.fn(),
+  saveNotifications: jest.fn(),
+  getCurrency: jest.fn(),
+  saveCurrency: jest.fn(),
+}));
+
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaInsetsContext: require('react').createContext({
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  }),
+}));
+
 // ─── Imports (after mocks) ────────────────────────────────────────────────────
 
 import SettingsScreen from '../app/(tabs)/settings';
+import { useFocusEffect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { getTheme, getNotifications, getCurrency } from '@/lib/preferences';
 
 // ─── Typed mock accessors ─────────────────────────────────────────────────────
 
 const mockUseAuth = useAuth as jest.Mock;
+const mockUseFocusEffect = useFocusEffect as jest.Mock;
+const mockGetTheme = getTheme as jest.MockedFunction<typeof getTheme>;
+const mockGetNotifications = getNotifications as jest.MockedFunction<typeof getNotifications>;
+const mockGetCurrency = getCurrency as jest.MockedFunction<typeof getCurrency>;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,6 +79,12 @@ function guestAuth() {
 describe('SettingsScreen — Sign Out', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetTheme.mockResolvedValue('system');
+    mockGetNotifications.mockResolvedValue('off');
+    mockGetCurrency.mockResolvedValue('USD');
+    mockUseFocusEffect.mockImplementation((callback) => {
+      React.useEffect(() => callback(), [callback]);
+    });
   });
 
   it('renders without crashing when authenticated', async () => {

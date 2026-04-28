@@ -1,5 +1,6 @@
 import React from 'react';
 import { ScrollView, ScrollViewProps } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { Box } from './box';
 
 export interface ScreenContainerProps extends ScrollViewProps {
@@ -33,13 +34,24 @@ export interface ScreenContainerProps extends ScrollViewProps {
  * ```
  */
 export function ScreenContainer({ className, children, ...scrollProps }: ScreenContainerProps) {
+  const insets = React.useContext(SafeAreaInsetsContext) ?? {
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  };
+
   return (
     <ScrollView
       className="flex-1 bg-paper"
       contentContainerStyle={{ flexGrow: 1 }}
+      showsVerticalScrollIndicator={false}
       {...scrollProps}
     >
-      <Box className={`px-6 pt-16 pb-16 w-full max-w-2xl ${className ?? ''}`}>
+      <Box
+        className={`px-6 pb-16 w-full max-w-2xl ${className ?? ''}`}
+        style={{ paddingTop: Math.max(insets.top, 64) }}
+      >
         {children}
       </Box>
     </ScrollView>
