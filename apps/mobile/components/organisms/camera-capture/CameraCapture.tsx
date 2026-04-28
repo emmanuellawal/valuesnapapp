@@ -17,7 +17,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Image, Linking } from 'react-native';
+import { Image, Linking, Platform } from 'react-native';
 import { useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -38,6 +38,7 @@ const CAMERA_QUALITY = 0.8;
  * State machine:
  * - idle → ready (camera permission granted)
  * - idle → denied (camera permission refused)
+ * - idle/ready/denied → captured (library photo selected)
  * - ready → preview (photo captured, awaiting confirmation)
  * - preview → captured (user confirms photo)
  * - preview → ready (user retakes)
@@ -147,7 +148,17 @@ export function CameraCapture({
    * Handle file upload fallback (when camera permission denied)
    */
   const handleFileUpload = useCallback(async () => {
+    setErrorMessage(null);
+
     try {
+      if (Platform.OS === 'android') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          setErrorMessage('Library access is required to choose a photo.');
+          return;
+        }
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         quality: CAMERA_QUALITY,
@@ -236,6 +247,22 @@ export function CameraCapture({
         <Text variant="caption" className="text-ink-muted">
           Tap to take a photo
         </Text>
+        {errorMessage && (
+          <Text variant="caption" className="text-signal">
+            {errorMessage}
+          </Text>
+        )}
+        <SwissPressable
+          onPress={handleFileUpload}
+          accessibilityLabel="Choose a photo from your library"
+          accessibilityHint="Opens your photo library"
+          className="py-4 items-center"
+          testID="camera-pick-library-idle"
+        >
+          <Text variant="caption" className="text-ink-muted">
+            Choose from library
+          </Text>
+        </SwissPressable>
       </Stack>
     );
   }
@@ -331,6 +358,17 @@ export function CameraCapture({
         <Text variant="caption" className="text-ink-muted">
           Tap to take a photo
         </Text>
+        <SwissPressable
+          onPress={handleFileUpload}
+          accessibilityLabel="Choose a photo from your library"
+          accessibilityHint="Opens your photo library"
+          className="py-4 items-center"
+          testID="camera-pick-library-ready"
+        >
+          <Text variant="caption" className="text-ink-muted">
+            Choose from library
+          </Text>
+        </SwissPressable>
       </Stack>
     );
   }
