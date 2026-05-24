@@ -2,8 +2,9 @@
 # running inside WSL2. Run this from an *elevated* PowerShell prompt on the
 # Windows host (not inside WSL).
 #
-# Prefer `networkingMode=mirrored` in %USERPROFILE%\.wslconfig over this script.
-# Mirrored mode removes the need for any portproxy or firewall rule. See
+# Prefer trying `networkingMode=mirrored` in %USERPROFILE%\.wslconfig first.
+# If Windows still cannot reach http://<your-lan-ip>:8083/status from the host,
+# use this script to open the explicit portproxy + firewall path instead. See
 # docs/deployment/README.md.
 
 [CmdletBinding()]
@@ -22,10 +23,26 @@ if (-not $wslIp) {
     exit 1
 }
 
-Write-Host "Configuring portproxy $Port -> $wslIp`:$Port"
+$ipconfig = Get-Command ipconfig.exe -ErrorAction SilentlyContinue
+$winIp = $null
+if ($ipconfig) {
+    $winIp = (& $ipconfig.Source) `
+        | ForEach-Object { $_.ToString().TrimEnd("`r") } `
+        | Select-String -Pattern 'IPv4 Address' `
+        | ForEach-Object { ($_ -split ': ')[-1] } `
+        | Where-Object { $_ -match '^(192\.168|10\.)' } `
+        | Select-Object -First 1
+}
+
+$portProxyTarget = $wslIp
+if ($winIp -and $wslIp -eq $winIp) {
+    $portProxyTarget = '127.0.0.1'
+}
+
+Write-Host "Configuring portproxy $Port -> $portProxyTarget`:$Port"
 
 netsh.exe interface portproxy delete v4tov4 listenport=$Port listenaddress=0.0.0.0 2>$null | Out-Null
-netsh.exe interface portproxy add    v4tov4 listenport=$Port listenaddress=0.0.0.0 connectport=$Port connectaddress=$wslIp | Out-Null
+netsh.exe interface portproxy add    v4tov4 listenport=$Port listenaddress=0.0.0.0 connectport=$Port connectaddress=$portProxyTarget | Out-Null
 
 $ruleName = "WSL Expo $Port"
 if (-not (Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue)) {
