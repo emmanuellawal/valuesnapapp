@@ -25,6 +25,9 @@ integration_test_results/
 .cache/
 .pytest_cache/
 
+# Local model eval — ephemeral comparison data; delete after decision (Story 5.5-10)
+eval/
+
 # IDE
 .vscode/
 .idea/
