@@ -31,7 +31,7 @@
 ## Testing Instructions
 
 ### Before Testing
-1. Start Expo dev server: `npm start` in `/apps/mobile`
+1. Start Expo dev server: `npm start` in `/apps/mobile` (supported device-testing path; this now runs the WSL-aware LAN launcher, not raw `expo start`)
 2. Access URL: `http://localhost:8083` (configured project port)
 3. Accept self-signed certificate warnings if testing with HTTPS
 

@@ -2,7 +2,7 @@
 
 **Date:** April 28, 2026
 **Epic Duration:** Estimated 4-6 days
-**Stories:** 12 implementation stories + retrospective
+**Stories:** 14 implementation stories + retrospective
 **Dependencies:** Epic 5.5 readiness gates complete
 
 ---
@@ -18,6 +18,8 @@ This plan locks the workstation model before Epic 6 begins:
 - Appraisal work follows the adopted 10/45/45 workstation model: restrained navigation rail, image pane, data pane.
 - PWA work includes concrete manifest, offline, static-export, font-preload, and layout-stability gates.
 - Network-resilience stories validate against the real Render endpoint: `https://valuesnapapp.onrender.com`.
+- Story **6-13** adds an **appraisal idempotency contract** (`Idempotency-Key` header preferred, or an equivalent body field) plus server-side dedupe so Story 5.5-7 client retries and future migration/offline retries cannot create duplicate valuation rows for the same logical submit.
+- Story **6-14** restores AI listing quality as a first-class delivery track (not polish): visual-grounded identification + safer confidence behavior, based on the 5.5-10 finding that both mini and 4o scored 0/5.
 
 ---
 
@@ -69,29 +71,35 @@ Expected response:
 
 Free-tier cold starts are expected after idle periods. Stories that test retry or network behavior must account for the first request taking roughly 30-60 seconds after spin-down.
 
+### Appraise idempotency (Story 6-13)
+
+Story 5.5-7 introduced `fetchWithRetry` for `POST /api/appraise`. Without idempotency, a successful write followed by a dropped response can produce **duplicate valuations** on retry. Story **6-13** defines the contract (prefer **`Idempotency-Key`** HTTP header; body field acceptable if header is impractical on a given client), server-side dedupe storage (TTL or scoped uniqueness), and client generation rules so Stories **6-7**, **6-12**, and any expanded retry UX build on a safe foundation.
+
 ---
 
 ## Story Dependency Graph
 
 ```text
+6-13  Appraise idempotency key         depends on 5.5-7 (retries live); should land before expanding retry/migration behavior
+6-14  AI listing quality overhaul       depends on 5.5-10 findings; should start early to de-risk listing reliability
 6-1   Tab navigation                  depends on 5.5-5, Story 3-6 SwissSidebar
 6-2   Responsive grid system           depends on 6-1 breakpoint policy
 6-3   PWA manifest                     no code dependency, must use Swiss color tokens
 6-4   Service worker / offline         depends on 6-3 manifest baseline
 6-5   Marketing landing page           depends on 6-2 grid tokens
 6-6   Network errors                   depends on Render endpoint from 5.5-2
-6-7   Retry mechanism                  depends on Render endpoint from 5.5-2 + 6-6 error mapping
+6-7   Retry mechanism                  depends on Render endpoint from 5.5-2 + 6-6 error mapping + 6-13 for safe appraise retries
 6-8   Rate-limit exceeded              depends on Render endpoint from 5.5-2
 6-9   Mobile UX patterns               depends on 6-1 preserving mobile tabs
 6-10  Desktop UX patterns              depends on 6-1 rail + 6-2 grid
 6-11  Desktop sidebar collapse         depends on 6-1/6-10 rail constraints
-6-12  Offline migration retry queue    depends on 6-4 offline foundation + Render endpoint
+6-12  Offline migration retry queue    depends on 6-4 offline foundation + Render endpoint; migration writes should follow 6-13 patterns where applicable
 ```
 
 Recommended execution order:
 
 ```text
-Phase 1:  6-1, 6-3, 6-6
+Phase 1:  6-13, 6-14, 6-1, 6-3, 6-6
 Phase 2:  6-2, 6-4, 6-7, 6-8, 6-9
 Phase 3:  6-10, 6-11, 6-12
 Phase 4:  6-5, retrospective
@@ -280,6 +288,8 @@ Network failures currently risk surfacing as generic or overly technical errors.
 
 Normalize network error handling around a real validation endpoint, not a mock-only path. Use `https://valuesnapapp.onrender.com` for manual and automated probes.
 
+**Idempotency:** Story **6-13** owns the `/api/appraise` idempotency contract. This story (6-6) should not introduce new retry loops that assume duplicate POSTs are harmless until 6-13 is `done` for the appraise path.
+
 This story owns user-facing error mapping that Story 6-7 must preserve. Keep the error surface explicit enough that retry progress, terminal failure, and rate-limit handling can build on it without rewriting the same `lib/api.ts` branches.
 
 **Acceptance Criteria:**
@@ -312,6 +322,8 @@ Transient Wi-Fi drops, Render cold starts, and temporary 502/503/504 responses s
 **What's Needed:**
 
 Build on the existing `fetchWithRetry` helper in `apps/mobile/lib/api.ts`, which already retries transient fetch failures and HTTP 502/503/504 responses from Story 5.5-7. Do not create a second retry helper. This story should refine coverage, UI retry feedback, timeout behavior, and integration with Story 6-6's error mapping.
+
+**Prerequisite:** Story **6-13** must be `done` before this story is accepted: the client must send an idempotency key on `POST /api/appraise`, and the backend must dedupe so bounded retries cannot create duplicate valuation rows.
 
 Validate against the live Render endpoint and preserve the existing `AppraiseError` surface.
 
@@ -475,6 +487,8 @@ Guest-to-auth migration can fail while offline or during a transient backend iss
 
 Queue failed migration work locally and retry when network health returns. This plan only locks the Render endpoint reference; queue behavior belongs to this future story.
 
+**Idempotency:** For any retried or replayed migration API calls, follow the same idempotency pattern as Story **6-13** (per-endpoint keys + server dedupe) wherever the backend exposes mutating operations — do not assume "retry = safe" without a contract.
+
 **Acceptance Criteria:**
 
 - [ ] Failed guest migration writes a local retry record without exposing secrets
@@ -493,10 +507,81 @@ Queue failed migration work locally and retry when network health returns. This 
 
 ---
 
+### Story 6-13: Appraise Idempotency Key
+
+**Origin:** Epic 5.5 Story 5.5-7 (`fetchWithRetry` on `POST /api/appraise`) + Epic 5.5 retrospective action item  
+**Category:** API contract / data integrity  
+**Estimate:** 4-8 hours
+
+**Problem:**  
+Client-side retries (and future offline/replay flows) can submit the same logical appraisal more than once. If the server already persisted a valuation but the response never reached the client, an innocent retry can create **duplicate valuation rows** for one user action.
+
+**What's Needed:**
+
+1. **Contract:** Prefer an HTTP **`Idempotency-Key`** header (opaque string, e.g. UUID v4) on `POST /api/appraise`. A request body field is an acceptable alternative only if a client stack cannot set headers reliably — document the chosen shape in `docs/deployment/README.md` or API notes.
+2. **Server:** Persist keys with enough context to dedupe safely (e.g. scoped by authenticated user id or guest session identifier + key). On duplicate key with the same semantic payload, return the **existing** valuation response (same `valuation_id` / resource identity) with HTTP 200 — do not insert a second row.
+3. **Client:** Generate one idempotency key per user-initiated appraisal submission; reuse the same key across `fetchWithRetry` attempts for that submission; generate a new key for a new user tap.
+4. **TTL / cleanup:** Define retention for idempotency records (time- or volume-bounded) so the store cannot grow without bound; document the policy in the story completion notes.
+
+**Acceptance Criteria:**
+
+- [ ] `POST /api/appraise` accepts `Idempotency-Key` (header) or the agreed body field; missing key behavior is defined (reject vs optional for backward compatibility — pick one and document)
+- [ ] Duplicate requests with the same key and equivalent payload do not create duplicate persisted valuations
+- [ ] Response on replay is stable (same primary identifiers the client already uses)
+- [ ] Mobile `appraise()` (or equivalent) sends the key and reuses it across retries from `fetchWithRetry`
+- [ ] Automated tests cover: first request succeeds, duplicate returns same outcome, conflicting payload with same key is rejected or handled per documented rule
+- [ ] Story file includes a `## Code Review` section before `done`
+
+**Files to touch:**
+
+- `backend/` appraise route handler and persistence layer
+- `backend/models.py` or migration if a new store/table is required
+- `apps/mobile/lib/api.ts` (and types) — attach key to appraise calls
+- `apps/mobile/__tests__/api.test.ts` or backend tests as appropriate
+
+---
+
+### Story 6-14: AI Listing Quality Overhaul
+
+**Origin:** Story 5.5-10 evaluation result (mini: 0/5, 4o: 0/5) + Epic 5.5 retrospective risk callout  
+**Category:** AI quality / listing reliability  
+**Estimate:** 5-10 hours
+
+**Problem:**  
+The current identification stack can produce confident but wrong outputs (including category-level hallucinations). This is worse than low-confidence unknowns because it can push users toward incorrect listing drafts.
+
+**What's Needed:**
+
+1. **Visual grounding first:** Update identification prompting so the model must describe what is literally visible (shape, materials, colors, logos/text, form factor, connectors) before naming brand/model.
+2. **Safer output behavior:** Constrain confidence and fallback behavior when grounding evidence is weak. Prevent "HIGH confidence" on unsupported guesses.
+3. **Search-keyword quality:** Ensure fallback search keywords remain specific and useful for sold-comp retrieval even when brand/model cannot be confirmed.
+4. **Measured re-check:** Re-run a defined photo set evaluation and record pass/fail criteria so quality claims are evidence-based, not anecdotal.
+5. **No blind model-cost escalation:** Model upgrade remains conditional on measured improvement, not assumption.
+
+**Acceptance Criteria:**
+
+- [ ] Prompt/spec requires describe-first visual grounding before product naming
+- [ ] Confidence output is bounded by grounding evidence; weak evidence cannot emit high-confidence brand/model claims
+- [ ] Fallback path provides concrete visual-descriptor keywords (not generic placeholders)
+- [ ] Evaluation run is documented with numeric summary and decision outcome
+- [ ] If model tier change is proposed, story notes include measured delta and cost rationale; otherwise remain on current tier with explicit justification
+- [ ] Story file includes a `## Code Review` section before `done`
+
+**Files to touch:**
+
+- `backend/services/ai.py`
+- `backend/models.py` and/or validators if confidence constraints require schema enforcement
+- `backend/tests/` AI prompt/validation tests
+- Story artifact in `docs/sprint-artifacts/` for evaluation summary and decision notes
+
+---
+
 ## Epic 6 Exit Criteria
 
 Epic 6 is not complete until:
 
+- [ ] Story **6-13** (Appraise idempotency key) is `done` before Epic 6 close; if deferred, deferral rationale and explicit duplicate-write risk acceptance must be recorded in epic closeout notes with product sign-off
+- [ ] Story **6-14** (AI listing quality overhaul) is `done` before Epic 6 close; if deferred, deferral rationale and explicit listing-quality risk acceptance must be recorded in epic closeout notes with product sign-off
 - [ ] Mobile tab navigation and desktop rail navigation both work without route duplication
 - [ ] Desktop appraisal screen follows the workstation split and passes static export
 - [ ] PWA manifest includes all required Swiss manifest fields and icon sizes
@@ -523,4 +608,6 @@ Epic 6 is not complete until:
 | 6-10 Implement Desktop UX Patterns | Desktop workstation | 5-8 hrs |
 | 6-11 Desktop Sidebar Collapse | Desktop UX enhancement | 3-5 hrs |
 | 6-12 Offline Migration Retry Queue | Offline / data resilience | 5-8 hrs |
-| **Total** | | **37-64 hrs** |
+| 6-13 Appraise Idempotency Key | API contract / data integrity | 4-8 hrs |
+| 6-14 AI Listing Quality Overhaul | AI quality / listing reliability | 5-10 hrs |
+| **Total** | | **46-82 hrs** |

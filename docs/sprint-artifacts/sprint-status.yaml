@@ -134,8 +134,8 @@ development_status:
   5-11-image-hosting-thumbnails: done  # Origin: Epic 3 retro + Story 3.4 notes; listings need photo upload
   epic-5-retrospective: completed
 
-  # Epic 5.5: Pre-Epic 6 Readiness (7 stories)
-  epic-5.5: in-progress
+  # Epic 5.5: Pre-Epic 6 Readiness (10 stories)
+  epic-5.5: done
   5.5-1-enforce-debt-gates: done            # Origin: Epic 5 retro AI6 (Critical); lint script + checklist extension + code review mandate
   5.5-2-deploy-backend-to-render: done              # Origin: Epic 5 retro AI1 (Critical); persistent API for real-device testing — review 2026-04-25 closed HIGH-1..4 + MEDIUM-5..7 + LOW-8; code-review cleanup 2026-04-26 corrected confidence precedence + env docs
   5.5-3-wire-and-polish-settings: done             # Origin: Epic 5 retro AI3+AI4 (High+Medium); Theme/Notifications/Currency + safe-area fix; code-review cleanup + manual AC4/AC5 validation complete 2026-04-28
@@ -145,11 +145,12 @@ development_status:
   5.5-7-network-polish: done                       # Origin: 5.5-2 party-mode; remove @expo/ngrok dead weight + add retry/backoff in lib/api.ts
   5.5-8-fix-photo-upload-base64-import: done       # Origin: 5.5-2 party-mode 2026-04-25 device test; storage.ts imports expo-file-system (new SDK 54 API) but accesses FileSystem.EncodingType.Base64 which only exists under expo-file-system/legacy → "Photo upload failed: Cannot read property 'Base64' of undefined" on every listing screen; one-line import swap + mock fix in storage.test.ts; unblocks listing photo uploads — implemented + tests pass 2026-04-25; code-review cleanup 2026-04-26 added real legacy export assertion
   5.5-9-replace-linking-openurl-with-webbrowser: done     # Origin: 5.5-2 party-mode 2026-04-25 device test; error-state.tsx + confidence-warning.tsx use Linking.openURL with uncaught promise rejection → "Unable to open URL: https://www.ebay.com/sch/…" surfaces as Uncaught (in promise, id: 0); swap to WebBrowser.openBrowserAsync (already a dependency, used in components/ExternalLink.tsx) and add .catch handler; add ErrorState fallbackLink onPress test — implemented + tests pass 2026-04-25; code-review cleanup 2026-04-26 added web branch coverage
-  epic-5.5-retrospective: optional
+  5.5-10-evaluate-openai-model-upgrade: done  # Origin: 5.5-2 device test; prompt escape hatch removed + 5-photo comparison run 2026-04-30; both models 0/5 — stay on gpt-4o-mini; confident hallucination pattern found → 6-13 scope expanded to require visual-grounding step in prompt; code-review cleanup enforced visual_condition enum + fixed AC3/test path
+  epic-5.5-retrospective: completed
 
-  # Epic 6: Platform & PWA (12 stories)
-  epic-6: backlog
-  6-1-implement-tab-navigation: backlog
+  # Epic 6: Platform & PWA (14 stories)
+  epic-6: in-progress
+  6-1-implement-tab-navigation: in-progress
   6-2-implement-responsive-grid-system: backlog
   6-3-configure-pwa-manifest: backlog
   6-4-implement-service-worker-for-offline: backlog
@@ -161,6 +162,8 @@ development_status:
   6-10-implement-desktop-ux-patterns: backlog
   6-11-desktop-sidebar-collapse: backlog  # Origin: Epic 3 retro; desktop rail has no collapse/expand toggle under the 10/45/45 workstation model
   6-12-offline-migration-retry-queue: backlog  # Origin: Epic 4 retro; failed guest migration not retried when back online
+  6-13-appraise-idempotency-key: done  # Origin: Epic 5.5 network retry follow-up; define appraise idempotency contract (Idempotency-Key header or body field) with server-side dedupe so retries/replays cannot create duplicate valuation rows
+  6-14-ai-listing-quality-overhaul: backlog  # Origin: 5.5-10 evaluation; both mini and 4o scored 0/5 on sampled set — implement visual grounding + safer confidence behavior before trusting listing prefill quality
   epic-6-retrospective: optional
 
   # Epic 7: Accessibility & Polish (12 stories)
