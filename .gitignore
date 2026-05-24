@@ -1,0 +1,17 @@
+# Root-level gitignore
+
+# Coverage output
+.coverage
+htmlcov/
+
+# Local model eval — ephemeral comparison data; delete after decision (Story 5.5-10)
+eval/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
