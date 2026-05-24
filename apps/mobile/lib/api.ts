@@ -47,6 +47,14 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Generate one idempotency key per user-initiated submission. */
+function createIdempotencyKey(): string {
+  if (typeof globalThis.crypto?.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 /**
  * fetch() wrapper with per-attempt timeout, exponential backoff, and narrow
  * retry on transient network/server errors.
@@ -132,10 +140,14 @@ export async function appraise(
   }
 
   let response: Response;
+  const idempotencyKey = createIdempotencyKey();
   try {
     response = await fetchWithRetry(`${env.apiUrl}/api/appraise`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
+      },
       body: JSON.stringify({
         image_base64: imageBase64,
         guest_session_id: guestSessionId,

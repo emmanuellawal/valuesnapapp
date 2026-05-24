@@ -7,12 +7,14 @@ Verifies:
 - guest_session_id flows through to the saved record
 """
 import base64
+from types import SimpleNamespace
 from unittest.mock import patch, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 
 from backend.main import app
+from backend.services.idempotency import IdempotencyUnavailableError
 
 
 TINY_PNG_B64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
@@ -169,3 +171,252 @@ class TestAppraisePersistence:
         assert resp.status_code == 200
         saved_record = mock_repo_cls.return_value.save.call_args[0][0]
         assert saved_record.guest_session_id is None
+
+    @patch("backend.main.AppraiseIdempotencyRepository")
+    @patch("backend.main.ValuationRepository")
+    @patch("backend.main.calculate_market_confidence")
+    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.identify_item_from_image")
+    def test_idempotency_replay_skips_duplicate_processing(
+        self,
+        mock_ai,
+        mock_ebay,
+        mock_confidence,
+        mock_repo_cls,
+        mock_idempotency_repo_cls,
+        client,
+    ):
+        """Same Idempotency-Key replays cached response and avoids duplicate insert."""
+        mock_ai.return_value = _make_fake_identity()
+        mock_ebay.return_value = FAKE_MARKET_DATA
+        mock_confidence.return_value = FAKE_CONFIDENCE_RESULT
+        mock_repo_cls.return_value.save.return_value = "uuid-1234"
+
+        replay_body = {
+            "identity": _make_fake_identity().model_dump(),
+            "valuation": FAKE_MARKET_DATA,
+            "confidence": FAKE_CONFIDENCE_RESULT.to_dict(),
+            "valuation_id": "uuid-1234",
+        }
+        replay_record = SimpleNamespace(status_code=200, response_body=replay_body)
+
+        idem_repo = mock_idempotency_repo_cls.return_value
+        idem_repo.start_request.side_effect = [
+            SimpleNamespace(status="started", replay=None),
+            SimpleNamespace(status="replay", replay=replay_record),
+        ]
+
+        first = client.post(
+            "/api/appraise",
+            headers={"Idempotency-Key": "idem-abc"},
+            json={"image_base64": TINY_PNG_B64, "guest_session_id": "guest-abc-123"},
+        )
+        second = client.post(
+            "/api/appraise",
+            headers={"Idempotency-Key": "idem-abc"},
+            json={"image_base64": TINY_PNG_B64, "guest_session_id": "guest-abc-123"},
+        )
+
+        assert first.status_code == 200
+        assert second.status_code == 200
+        assert second.json() == replay_body
+
+        # Expensive appraise flow should execute only once.
+        assert mock_ai.call_count == 1
+        assert mock_repo_cls.return_value.save.call_count == 1
+        idem_repo.complete_request.assert_called_once()
+        idem_repo.start_request.assert_any_call(
+            principal_type="guest",
+            principal_id="guest-abc-123",
+            idempotency_key="idem-abc",
+        )
+
+    @patch("backend.main.AppraiseIdempotencyRepository")
+    @patch("backend.main.ValuationRepository")
+    @patch("backend.main.calculate_market_confidence")
+    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.identify_item_from_image")
+    def test_same_key_without_replay_record_runs_new_request(
+        self,
+        mock_ai,
+        mock_ebay,
+        mock_confidence,
+        mock_repo_cls,
+        mock_idempotency_repo_cls,
+        client,
+    ):
+        """If replay is missing (e.g., expired), same key is processed again."""
+        mock_ai.return_value = _make_fake_identity()
+        mock_ebay.return_value = FAKE_MARKET_DATA
+        mock_confidence.return_value = FAKE_CONFIDENCE_RESULT
+        mock_repo_cls.return_value.save.side_effect = ["uuid-1", "uuid-2"]
+
+        idem_repo = mock_idempotency_repo_cls.return_value
+        idem_repo.start_request.side_effect = [
+            SimpleNamespace(status="started", replay=None),
+            SimpleNamespace(status="started", replay=None),
+        ]
+
+        first = client.post(
+            "/api/appraise",
+            headers={"Idempotency-Key": "idem-expired"},
+            json={"image_base64": TINY_PNG_B64, "guest_session_id": "guest-abc-123"},
+        )
+        second = client.post(
+            "/api/appraise",
+            headers={"Idempotency-Key": "idem-expired"},
+            json={"image_base64": TINY_PNG_B64, "guest_session_id": "guest-abc-123"},
+        )
+
+        assert first.status_code == 200
+        assert second.status_code == 200
+        assert first.json()["valuation_id"] == "uuid-1"
+        assert second.json()["valuation_id"] == "uuid-2"
+
+        assert mock_ai.call_count == 2
+        assert mock_repo_cls.return_value.save.call_count == 2
+        assert idem_repo.complete_request.call_count == 2
+
+    @patch("backend.main.AppraiseIdempotencyRepository")
+    @patch("backend.main.ValuationRepository")
+    @patch("backend.main.calculate_market_confidence")
+    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.identify_item_from_image")
+    def test_idempotency_without_guest_session_uses_anonymous_principal(
+        self,
+        mock_ai,
+        mock_ebay,
+        mock_confidence,
+        mock_repo_cls,
+        mock_idempotency_repo_cls,
+        client,
+    ):
+        mock_ai.return_value = _make_fake_identity()
+        mock_ebay.return_value = FAKE_MARKET_DATA
+        mock_confidence.return_value = FAKE_CONFIDENCE_RESULT
+        mock_repo_cls.return_value.save.return_value = "uuid-anon"
+        mock_idempotency_repo_cls.return_value.start_request.return_value = SimpleNamespace(
+            status="started",
+            replay=None,
+        )
+
+        resp = client.post(
+            "/api/appraise",
+            headers={"Idempotency-Key": "idem-anon"},
+            json={"image_base64": TINY_PNG_B64},
+        )
+
+        assert resp.status_code == 200
+        mock_idempotency_repo_cls.return_value.start_request.assert_called_once_with(
+            principal_type="guest",
+            principal_id="anonymous",
+            idempotency_key="idem-anon",
+        )
+
+    @patch("backend.main.get_supabase")
+    @patch("backend.main.AppraiseIdempotencyRepository")
+    @patch("backend.main.ValuationRepository")
+    @patch("backend.main.calculate_market_confidence")
+    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.identify_item_from_image")
+    def test_idempotency_prefers_authenticated_user_scope(
+        self,
+        mock_ai,
+        mock_ebay,
+        mock_confidence,
+        mock_repo_cls,
+        mock_idempotency_repo_cls,
+        mock_get_supabase,
+        client,
+    ):
+        mock_ai.return_value = _make_fake_identity()
+        mock_ebay.return_value = FAKE_MARKET_DATA
+        mock_confidence.return_value = FAKE_CONFIDENCE_RESULT
+        mock_repo_cls.return_value.save.return_value = "uuid-auth"
+        mock_idempotency_repo_cls.return_value.start_request.return_value = SimpleNamespace(
+            status="started",
+            replay=None,
+        )
+
+        supabase = MagicMock()
+        supabase.auth.get_user.return_value = MagicMock(user=MagicMock(id="user-123"))
+        mock_get_supabase.return_value = supabase
+
+        resp = client.post(
+            "/api/appraise",
+            headers={
+                "Idempotency-Key": "idem-user",
+                "Authorization": "Bearer token-123",
+            },
+            json={"image_base64": TINY_PNG_B64, "guest_session_id": "guest-abc-123"},
+        )
+
+        assert resp.status_code == 200
+        mock_idempotency_repo_cls.return_value.start_request.assert_called_once_with(
+            principal_type="user",
+            principal_id="user-123",
+            idempotency_key="idem-user",
+        )
+
+    @patch("backend.main.AppraiseIdempotencyRepository")
+    @patch("backend.main.ValuationRepository")
+    @patch("backend.main.calculate_market_confidence")
+    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.identify_item_from_image")
+    def test_same_key_in_progress_returns_conflict_without_processing(
+        self,
+        mock_ai,
+        mock_ebay,
+        mock_confidence,
+        mock_repo_cls,
+        mock_idempotency_repo_cls,
+        client,
+    ):
+        mock_idempotency_repo_cls.return_value.start_request.return_value = SimpleNamespace(
+            status="in_progress",
+            replay=None,
+        )
+
+        resp = client.post(
+            "/api/appraise",
+            headers={"Idempotency-Key": "idem-in-flight"},
+            json={"image_base64": TINY_PNG_B64, "guest_session_id": "guest-abc-123"},
+        )
+
+        assert resp.status_code == 409
+        assert resp.json()["error"]["code"] == "IDEMPOTENCY_IN_PROGRESS"
+        mock_ai.assert_not_called()
+        mock_ebay.assert_not_called()
+        mock_confidence.assert_not_called()
+        mock_repo_cls.return_value.save.assert_not_called()
+
+    @patch("backend.main.AppraiseIdempotencyRepository")
+    @patch("backend.main.ValuationRepository")
+    @patch("backend.main.calculate_market_confidence")
+    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.identify_item_from_image")
+    def test_idempotency_reservation_failure_returns_503_without_processing(
+        self,
+        mock_ai,
+        mock_ebay,
+        mock_confidence,
+        mock_repo_cls,
+        mock_idempotency_repo_cls,
+        client,
+    ):
+        mock_idempotency_repo_cls.return_value.start_request.side_effect = (
+            IdempotencyUnavailableError("db down")
+        )
+
+        resp = client.post(
+            "/api/appraise",
+            headers={"Idempotency-Key": "idem-unavailable"},
+            json={"image_base64": TINY_PNG_B64, "guest_session_id": "guest-abc-123"},
+        )
+
+        assert resp.status_code == 503
+        assert resp.json()["error"]["code"] == "IDEMPOTENCY_UNAVAILABLE"
+        mock_ai.assert_not_called()
+        mock_ebay.assert_not_called()
+        mock_confidence.assert_not_called()
+        mock_repo_cls.return_value.save.assert_not_called()

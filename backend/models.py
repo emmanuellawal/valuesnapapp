@@ -14,6 +14,13 @@ class Identifiers(BaseModel):
 
 # Type alias for AI identification confidence levels
 AIConfidenceLevel = Literal["HIGH", "MEDIUM", "LOW"]
+VisualCondition = Literal[
+    "new",
+    "used_excellent",
+    "used_good",
+    "used_fair",
+    "damaged",
+]
 
 # Type alias for Market confidence levels (Story 2-5)
 MarketConfidenceLevel = Literal["HIGH", "MEDIUM", "LOW"]
@@ -41,7 +48,7 @@ class ItemIdentity(BaseModel):
     model: str = Field(default="unknown", description="Model name or number")
     
     # Condition is visual, so GPT keeps this, but renamed to be specific
-    visual_condition: str = Field(
+    visual_condition: VisualCondition = Field(
         description="Visual state: new, used_excellent, used_good, used_fair, damaged"
     )
     condition_details: str = Field(

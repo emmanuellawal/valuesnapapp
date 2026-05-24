@@ -40,6 +40,10 @@ describe('appraise', () => {
       'http://test-api.local/api/appraise',
       expect.objectContaining({
         method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          'Idempotency-Key': expect.any(String),
+        }),
         body: JSON.stringify({
           image_base64: 'base64data',
           guest_session_id: 'guest-123',
@@ -47,6 +51,39 @@ describe('appraise', () => {
       }),
     );
     expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('reuses one Idempotency-Key across retry attempts', async () => {
+    jest.useFakeTimers();
+    const mockResponse = {
+      identity: { brand: 'Canon' },
+      valuation: { fair_market_value: 200 },
+      confidence: { market_confidence: 'HIGH' },
+      valuation_id: 'uuid-1',
+    };
+
+    global.fetch = jest
+      .fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+    const promise = appraise('base64data', 'guest-123');
+    await jest.advanceTimersByTimeAsync(1_000);
+    const result = await promise;
+
+    expect(result).toEqual(mockResponse);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+
+    const firstHeaders = (global.fetch as jest.Mock).mock.calls[0][1]
+      .headers as Record<string, string>;
+    const secondHeaders = (global.fetch as jest.Mock).mock.calls[1][1]
+      .headers as Record<string, string>;
+
+    expect(firstHeaders['Idempotency-Key']).toBeDefined();
+    expect(secondHeaders['Idempotency-Key']).toBe(firstHeaders['Idempotency-Key']);
   });
 
   it('throws NETWORK_ERROR after exhausting retries on fetch failure', async () => {

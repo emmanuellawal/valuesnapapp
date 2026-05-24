@@ -62,6 +62,20 @@ Set in the dashboard — **names only**; copy values from your local `backend/.e
 
 **Dashboard drift caveat:** `render.yaml` locks build/start/rootDir and the three non-secret vars (`PYTHON_VERSION`, `USE_MOCK`, `EBAY_USE_SANDBOX`) but only **declares** the secrets above with `sync: false`. Render does not validate that secret values match between the blueprint declaration and the dashboard — if someone toggles `USE_MOCK=true` in the dashboard for debugging and forgets to revert, prod silently switches to mock mode with no git trace. Treat dashboard edits as a PR-equivalent change and document them in the relevant story's Change Log.
 
+### Appraise idempotency contract (Story 6-13)
+
+`POST /api/appraise` now supports an optional `Idempotency-Key` request header.
+
+- **Header:** `Idempotency-Key: <opaque-client-key>` (UUID v4 recommended)
+- **Scope:** `(principal_type, principal_id, idempotency_key)` where principal is:
+  - authenticated `user_id` when a valid bearer token is present
+  - otherwise `guest_session_id`
+  - otherwise fallback guest principal (`anonymous`)
+- **Semantics:** reservation-first, key-only replay for this endpoint. The server reserves the scoped key before AI/eBay processing starts. If a completed key already exists in scope, the server returns the originally stored response payload (`valuation_id` included) and does not insert another valuation row. If the same scoped key is still processing, the server returns `409` with `IDEMPOTENCY_IN_PROGRESS`.
+- **Store availability:** keyed requests fail with `503` and `IDEMPOTENCY_UNAVAILABLE` if the idempotency store cannot reserve the key safely.
+- **Missing key behavior:** backward-compatible optional mode for now (request still executes without dedupe).
+- **Retention:** idempotency records expire after 24 hours for replay lookup (see `backend/migrations/003_create_idempotency_keys_table.sql`). Physical cleanup is still an operational follow-up; expired rows are ignored and can be removed with a scheduled Supabase cleanup later.
+
 ### Mobile app
 
 Set in `apps/mobile/.env` (gitignored — copy from `apps/mobile/.env.render`):

@@ -11,6 +11,7 @@ from backend.rate_limit import RateLimitRule, enforce_user_rate_limit
 from backend.services.ai import identify_item_from_image, AIIdentificationError
 from backend.services.confidence import calculate_market_confidence
 from backend.services.ebay import search_sold_listings, get_api_stats, reset_api_stats
+from backend.services.idempotency import AppraiseIdempotencyRepository, IdempotencyUnavailableError
 from backend.services.valuations import ValuationRepository
 
 # Configure logging
@@ -80,6 +81,40 @@ def _serialize_valuation_record(record: ValuationRecord) -> dict:
     }
 
 
+def _extract_idempotency_key(request: Request) -> str | None:
+    """Read and normalize Idempotency-Key header."""
+    key = request.headers.get("Idempotency-Key", "").strip()
+    return key or None
+
+
+def _resolve_appraise_principal(http_request: Request, body: AnalyzeRequest) -> tuple[str, str]:
+    """
+    Resolve idempotency principal scope.
+
+    Preference order:
+    1) Valid authenticated user id (if Authorization header is present and valid)
+    2) guest_session_id from appraise payload
+    3) fallback anonymous guest scope
+    """
+    auth_header = http_request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split(" ", 1)[1].strip()
+        if token:
+            try:
+                user_response = get_supabase().auth.get_user(token)
+                user = getattr(user_response, "user", None)
+                user_id = getattr(user, "id", None)
+                if user_id:
+                    return "user", user_id
+            except Exception as e:
+                logger.warning(f"Appraise idempotency auth lookup failed; falling back to guest scope: {e}")
+
+    if body.guest_session_id:
+        return "guest", body.guest_session_id
+
+    return "guest", "anonymous"
+
+
 @app.get("/")
 def read_root():
     return {
@@ -92,7 +127,7 @@ def read_root():
 
 
 @app.post("/api/appraise")
-async def appraise_item(request: AnalyzeRequest):
+async def appraise_item(http_request: Request, request: AnalyzeRequest):
     """
     Main appraisal endpoint.
     
@@ -102,6 +137,53 @@ async def appraise_item(request: AnalyzeRequest):
     3. Calculate market confidence based on data quality
     4. Combined response with identity + valuation + confidence
     """
+    idempotency_key = _extract_idempotency_key(http_request)
+    principal_type, principal_id = _resolve_appraise_principal(http_request, request)
+    idempotency_repo = None
+
+    if idempotency_key:
+        idempotency_repo = AppraiseIdempotencyRepository()
+        try:
+            claim = idempotency_repo.start_request(
+                principal_type=principal_type,
+                principal_id=principal_id,
+                idempotency_key=idempotency_key,
+            )
+        except IdempotencyUnavailableError:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "success": False,
+                    "error": {
+                        "code": "IDEMPOTENCY_UNAVAILABLE",
+                        "message": "Unable to safely process this request right now",
+                    },
+                },
+            )
+
+        if claim.status == "replay" and claim.replay is not None:
+            logger.info(
+                "Idempotency replay hit for /api/appraise (%s:%s)",
+                principal_type,
+                principal_id,
+            )
+            return JSONResponse(
+                status_code=claim.replay.status_code,
+                content=claim.replay.response_body,
+            )
+
+        if claim.status == "in_progress":
+            return JSONResponse(
+                status_code=409,
+                content={
+                    "success": False,
+                    "error": {
+                        "code": "IDEMPOTENCY_IN_PROGRESS",
+                        "message": "An appraisal with this idempotency key is already processing",
+                    },
+                },
+            )
+
     # Step 1: Visual Identification (GPT)
     try:
         identity = await identify_item_from_image(request.image_base64)
@@ -176,6 +258,7 @@ async def appraise_item(request: AnalyzeRequest):
             identity_dict=identity.model_dump(),
             valuation_dict=market_data,
             confidence_dict=confidence_result.to_dict(),
+            user_id=principal_id if principal_type == "user" else None,
             guest_session_id=request.guest_session_id,
         )
         repo = ValuationRepository()
@@ -185,12 +268,24 @@ async def appraise_item(request: AnalyzeRequest):
         logger.error(f"Failed to persist valuation (non-fatal): {e}")
     
     # Step 5: Combine and Return
-    return {
+    response_payload = {
         "identity": identity.model_dump(),
         "valuation": market_data,
         "confidence": confidence_result.to_dict(),
         "valuation_id": valuation_id,
     }
+
+    if idempotency_key and idempotency_repo:
+        idempotency_repo.complete_request(
+            principal_type=principal_type,
+            principal_id=principal_id,
+            idempotency_key=idempotency_key,
+            status_code=200,
+            response_body=response_payload,
+            valuation_id=valuation_id,
+        )
+
+    return response_payload
 
 
 @app.get("/health")
