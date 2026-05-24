@@ -2,7 +2,7 @@ import React from 'react';
 import { useWindowDimensions } from 'react-native';
 import { Tabs } from 'expo-router';
 
-import { BREAKPOINTS } from '@/constants/breakpoints';
+import { BREAKPOINTS, computeRailWidth } from '@/constants/breakpoints';
 import { SwissTabBar } from '@/components/organisms/swiss-tab-bar';
 import { SwissSidebar } from '@/components/organisms/swiss-sidebar';
 
@@ -21,6 +21,7 @@ import { SwissSidebar } from '@/components/organisms/swiss-sidebar';
 export default function TabLayout() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= BREAKPOINTS.desktop;
+  const railWidth = computeRailWidth(width);
 
   return (
     <Tabs
@@ -29,7 +30,7 @@ export default function TabLayout() {
         tabBarPosition: isDesktop ? 'left' : 'bottom',
       }}
       tabBar={(props) =>
-        isDesktop ? <SwissSidebar {...props} /> : <SwissTabBar {...props} />
+        isDesktop ? <SwissSidebar {...props} railWidth={railWidth} /> : <SwissTabBar {...props} />
       }
     >
       <Tabs.Screen

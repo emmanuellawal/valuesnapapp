@@ -14,14 +14,19 @@ import { Text } from '@/components/primitives';
  * - Active item: font-semibold weight only — no color shift, no background fill
  * - Single 1px right border as the sole structural separator
  * - No safe area padding — desktop-only component
- * - Fixed 240px width; flex: 1 height fills the navigator container
+ * - Width is provided by parent layout (responsive rail); flex: 1 height fills the navigator container
  */
-export function SwissSidebar({ state, descriptors, navigation }: BottomTabBarProps) {
+export function SwissSidebar({
+  state,
+  descriptors,
+  navigation,
+  railWidth,
+}: BottomTabBarProps & { railWidth: number }) {
   return (
     <View
       accessibilityRole="tablist"
       className="bg-paper border-r border-divider py-8 px-6"
-      style={{ width: 240, flex: 1 }}
+      style={{ width: railWidth, flex: 1 }}
     >
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];

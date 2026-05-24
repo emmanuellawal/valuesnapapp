@@ -7,3 +7,7 @@ export const BREAKPOINTS = {
   desktop: 1024,
   largeDesktop: 1440,
 } as const;
+
+export function computeRailWidth(viewportWidth: number): number {
+  return Math.max(80, Math.min(Math.floor(viewportWidth * 0.1), 144));
+}
