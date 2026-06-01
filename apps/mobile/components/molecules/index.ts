@@ -19,3 +19,5 @@ export type { FormFieldSkeletonProps } from './form-field-skeleton';
 export { FormFieldSkeleton } from './form-field-skeleton';
 export { BatchCardSkeleton } from './batch-card-skeleton';
 export { GuestBanner } from './guest-banner';
+export { NetworkBanner } from './network-banner';
+export type { NetworkBannerProps } from './network-banner';

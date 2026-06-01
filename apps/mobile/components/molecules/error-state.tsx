@@ -42,10 +42,10 @@ const ERROR_CONFIG: Record<ErrorType, { title: string; suggestions: string[] }> 
     ],
   },
   NETWORK_ERROR: {
-    title: 'Connection problem',
+    title: 'Connection failed',
     suggestions: [
       'Check your internet connection',
-      'Try again when you have a stable connection',
+      "Your photo is ready — tap Try again to resubmit",
     ],
   },
   RATE_LIMIT: {
