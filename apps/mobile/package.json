@@ -11,15 +11,18 @@
     "ios:lan": "bash ./scripts/start-lan.sh --ios",
     "ios:wsl": "bash ./scripts/start-wsl.sh --ios",
     "web": "expo start --web --port 8083",
+    "build:web": "expo export -p web",
     "test:screenshots": "playwright test tests/screenshots.spec.ts",
     "test:screenshots:ui": "playwright test tests/screenshots.spec.ts --ui",
     "test:screenshots:headed": "playwright test tests/screenshots.spec.ts --headed",
     "test:e2e:migration": "playwright test -c playwright.migration.config.ts tests/migration-flow.spec.ts",
     "test:prod-harness-guard": "rm -rf dist-prod-guard && env EXPO_NO_DOTENV=1 EXPO_PUBLIC_USE_MOCK=false EXPO_PUBLIC_SUPABASE_URL=https://guard.supabase.co EXPO_PUBLIC_SUPABASE_ANON_KEY=guard-anon-key EXPO_PUBLIC_API_URL=http://localhost:8000 npx expo export --platform web --output-dir dist-prod-guard && node ./scripts/assert-no-test-harness-in-prod.mjs dist-prod-guard",
+    "test:sw-runtime": "node ./scripts/test-sw-runtime.mjs",
     "test": "jest",
-    "test:ci": "jest --ci --runInBand",
+    "test:ci": "jest --ci --runInBand && npm run test:sw-runtime",
     "test:unit": "jest --testPathPattern='__tests__'",
-    "lint": "expo lint --max-warnings 0"
+    "lint": "expo lint --max-warnings 0",
+    "gen:icons": "node scripts/gen-pwa-icons.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
