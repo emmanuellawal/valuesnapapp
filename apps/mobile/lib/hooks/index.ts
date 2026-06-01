@@ -11,3 +11,6 @@ export { useProgressStages } from './useProgressStages';
 export type { UseProgressStagesOptions, UseProgressStagesReturn } from './useProgressStages';
 
 export { useOnlineStatus, getInitialOnlineStatus } from './useOnlineStatus';
+
+export { useGridColumns } from './useGridColumns';
+export type { GridConfig } from './useGridColumns';

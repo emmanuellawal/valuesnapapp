@@ -18,6 +18,7 @@ jest.mock('@/lib/migration', () => ({
 
 jest.mock('@/lib/hooks', () => ({
   useOnlineStatus: jest.fn(() => true),
+  useGridColumns: jest.fn(() => ({ numColumns: 1, gap: 16 })),
 }));
 
 jest.mock('@/lib/env', () => ({

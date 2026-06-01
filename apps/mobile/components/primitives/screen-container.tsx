@@ -6,6 +6,13 @@ import { Box } from './box';
 export interface ScreenContainerProps extends ScrollViewProps {
   /** NativeWind className for additional styling on the inner container */
   className?: string;
+  /**
+   * When true, uses max-w-5xl (1024px) instead of max-w-2xl (640px).
+   * Use for grid/list surfaces (e.g. history screen). Text-first screens
+   * (settings, camera) omit this prop and keep the narrow reading column.
+   * Do not add further variants here — this prop is intentionally minimal.
+   */
+  wide?: boolean;
   children: React.ReactNode;
 }
 
@@ -14,13 +21,14 @@ export interface ScreenContainerProps extends ScrollViewProps {
  *
  * Provides the shared layout structure for every screen:
  * - Full-bleed paper background
- * - Max-width content column (640px) for desktop readability
+ * - Max-width content column (640px default, 1024px when `wide` is true)
  * - Standardized horizontal padding (24px)
  * - Standardized vertical padding (64px top, 64px bottom)
  * - ScrollView with bounce
  *
  * Swiss design rationale:
- * - Max-width prevents line lengths >80ch on desktop
+ * - Default max-width keeps text-centric screens readable
+ * - Optional wide max-width gives grid/list surfaces room to breathe
  * - Consistent padding eliminates screen-to-screen jank
  * - Flush-left alignment within the constrained column
  *
@@ -33,7 +41,7 @@ export interface ScreenContainerProps extends ScrollViewProps {
  * </ScreenContainer>
  * ```
  */
-export function ScreenContainer({ className, children, ...scrollProps }: ScreenContainerProps) {
+export function ScreenContainer({ className, wide, children, ...scrollProps }: ScreenContainerProps) {
   const insets = React.useContext(SafeAreaInsetsContext) ?? {
     top: 0,
     right: 0,
@@ -49,7 +57,7 @@ export function ScreenContainer({ className, children, ...scrollProps }: ScreenC
       {...scrollProps}
     >
       <Box
-        className={`px-6 pb-16 w-full max-w-2xl ${className ?? ''}`}
+        className={`px-6 pb-16 w-full ${wide ? 'max-w-5xl' : 'max-w-2xl'} ${className ?? ''}`}
         style={{ paddingTop: Math.max(insets.top, 64) }}
       >
         {children}

@@ -12,10 +12,11 @@ export interface HistoryGridProps {
   onItemPress?: (item: HistoryGridItem) => void;
   /** Number of columns for the responsive grid layout (1–4). Defaults to 2. */
   numColumns?: number;
+  /** Gap between grid items in pixels. Defaults to 16. Pass from useGridColumns() for breakpoint-correct spacing. */
+  gap?: number;
 }
 
-export function HistoryGrid({ items, onItemPress, numColumns = 2 }: HistoryGridProps) {
-  const gap = 16;
+export function HistoryGrid({ items, onItemPress, numColumns = 2, gap = 16 }: HistoryGridProps) {
   const columnWidth =
     numColumns === 1
       ? ('100%' as const)

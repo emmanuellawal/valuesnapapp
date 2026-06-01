@@ -1,11 +1,10 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
-import { useWindowDimensions, View } from 'react-native';
+import { View } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 
 import { Box, Stack, Text, SwissPressable, ScreenContainer } from '@/components/primitives';
 import { HistoryGridSkeleton } from '@/components/molecules';
 import { HistoryGrid, type HistoryGridItem } from '@/components/organisms/history-grid';
-import { BREAKPOINTS } from '@/constants/breakpoints';
 import { useAuth } from '@/contexts/AuthContext';
 import { env } from '@/lib/env';
 import { fetchServerHistory, migrateGuestData } from '@/lib/migration';
@@ -15,7 +14,7 @@ import {
   getOrCreateGuestSessionId,
 } from '@/lib/localHistory';
 import { type Valuation, ValuationStatus } from '@/types/valuation';
-import { useOnlineStatus } from '@/lib/hooks';
+import { useOnlineStatus, useGridColumns } from '@/lib/hooks';
 
 /**
  * Map raw Valuation[] from storage to HistoryGridItem[] for display.
@@ -44,20 +43,14 @@ export default function HistoryScreen() {
   const { session, isGuest, isLoading: isAuthLoading } = useAuth();
   const activeSession = session;
   const activeIsGuest = isGuest;
-  const { width } = useWindowDimensions();
   const isOnline = useOnlineStatus();
+  const { numColumns, gap } = useGridColumns();
   const [history, setHistory] = useState<Valuation[]>([]);
   const [serverItems, setServerItems] = useState<HistoryGridItem[] | null>(null);
   const [migrationBanner, setMigrationBanner] = useState<{ count: number } | null>(null);
   const [isMigrating, setIsMigrating] = useState(false);
   const [migrationError, setMigrationError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const numColumns =
-    width < BREAKPOINTS.tablet ? 1 :
-    width < BREAKPOINTS.desktop ? 2 :
-    width < BREAKPOINTS.largeDesktop ? 3 :
-    4;
 
   const bannerDismissed = useRef(false);
 
@@ -179,7 +172,7 @@ export default function HistoryScreen() {
   );
 
   return (
-    <ScreenContainer>
+    <ScreenContainer wide>
       {visibleMigrationBanner ? (
         <View testID="migration-banner" className="mb-6">
           <Text variant="body" className="text-ink mb-4">
@@ -253,7 +246,7 @@ export default function HistoryScreen() {
         </Stack>
 
         {isLoading ? (
-          <HistoryGridSkeleton count={6} numColumns={numColumns} />
+          <HistoryGridSkeleton count={6} numColumns={numColumns} gap={gap} />
         ) : itemCount === 0 ? (
           <Box className="py-16 items-center">
             <Text variant="h3" className="text-ink-muted">
@@ -263,7 +256,7 @@ export default function HistoryScreen() {
               Tap the Camera tab to snap your first item
             </Text>
             <Box className="mt-6">
-              <SwissPressable onPress={() => router.push('/')} accessibilityLabel="Start valuing items">
+              <SwissPressable onPress={() => router.push('/camera')} accessibilityLabel="Start valuing items">
                 <Text variant="body" className="font-semibold">
                   Start Valuing
                 </Text>
@@ -274,6 +267,7 @@ export default function HistoryScreen() {
           <HistoryGrid
             items={historyItems}
             numColumns={numColumns}
+            gap={gap}
             onItemPress={(item) => router.push(`/appraisal?id=${item.id}`)}
           />
         )}
