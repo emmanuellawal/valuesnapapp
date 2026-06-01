@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "ValueSnap",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -31,7 +31,9 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "themeColor": "#0A0A0A",
+      "backgroundColor": "#FAFAF8"
     },
     "plugins": [
       "expo-router",
