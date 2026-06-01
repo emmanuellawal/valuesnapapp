@@ -50,14 +50,14 @@ jest.mock('expo-router', () => {
     const state = {
       index: 0,
       routes: [
-        { key: 'index-key', name: 'index' },
+        { key: 'camera-key', name: 'camera' },
         { key: 'history-key', name: 'history' },
         { key: 'settings-key', name: 'settings' },
       ],
     };
 
     const descriptors = {
-      'index-key': { options: { title: 'Camera' } },
+      'camera-key': { options: { title: 'Camera' } },
       'history-key': { options: { title: 'History' } },
       'settings-key': { options: { title: 'Settings' } },
     };

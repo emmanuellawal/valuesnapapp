@@ -26,7 +26,7 @@ test.describe('App Screenshots', () => {
     test.use({ viewport: { width: 1280, height: 720 } });
 
     test('web - Camera', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/camera');
       await waitForAppReady(page);
       await page.getByText("What are you selling").waitFor({ timeout: 15000 });
 
@@ -37,9 +37,8 @@ test.describe('App Screenshots', () => {
     });
 
     test('web - History', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/history');
       await waitForAppReady(page);
-      await page.click('text=History');
       await page.getByText('Your collection').waitFor({ timeout: 15000 });
 
       await page.screenshot({
@@ -61,9 +60,8 @@ test.describe('App Screenshots', () => {
     });
 
     test('web - Settings', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/settings');
       await waitForAppReady(page);
-      await page.click('text=Settings');
       await page.getByText('Your account').waitFor({ timeout: 15000 });
 
       await page.screenshot({
@@ -160,7 +158,7 @@ test.describe('App Screenshots', () => {
     });
 
     test('mobile - Camera', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/camera');
       await waitForAppReady(page);
       await page.getByText("What are you selling").waitFor({ timeout: 15000 });
 
@@ -171,9 +169,8 @@ test.describe('App Screenshots', () => {
     });
 
     test('mobile - History', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/history');
       await waitForAppReady(page);
-      await page.click('text=History');
       await page.getByText('Your collection').waitFor({ timeout: 15000 });
 
       await page.screenshot({
@@ -194,9 +191,8 @@ test.describe('App Screenshots', () => {
     });
 
     test('mobile - Settings', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/settings');
       await waitForAppReady(page);
-      await page.click('text=Settings');
       await page.getByText('Your account').waitFor({ timeout: 15000 });
 
       await page.screenshot({

@@ -32,7 +32,7 @@ jest.mock('@/types/transformers', () => ({
 
 jest.mock('@/components/organisms', () => require('../test-utils/mock-organisms'));
 
-import CameraScreen from '@/app/(tabs)/index';
+import CameraScreen from '@/app/(tabs)/camera';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOnlineStatus, useProgressStages } from '@/lib/hooks';

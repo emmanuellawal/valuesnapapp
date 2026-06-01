@@ -1,6 +1,6 @@
 // Use the legacy subpath: in Expo SDK 54 the bare `expo-file-system` import
 // exposes the new class-based API which does NOT export `EncodingType`. The
-// camera screen (apps/mobile/app/(tabs)/index.tsx) already uses the legacy
+// camera screen (apps/mobile/app/(tabs)/camera.tsx) already uses the legacy
 // import for the same reason. See Story 5.5-8 for full context.
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
