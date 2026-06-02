@@ -122,15 +122,42 @@ describe('appraise', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  it('maps HTTP 429 to RATE_LIMIT without retrying', async () => {
+  it('maps HTTP 429 to RATE_LIMIT with Retry-After header without retrying', async () => {
+    const headers = {
+      get: jest.fn().mockImplementation((name: string) =>
+        name === 'Retry-After' ? '2700' : null,
+      ),
+    };
+
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
       status: 429,
+      headers,
       json: () => Promise.resolve({}),
     });
 
     await expect(appraise('data', 'guest')).rejects.toMatchObject({
       errorType: 'RATE_LIMIT',
+      retryAfterSeconds: 2700,
+    });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('defaults Retry-After to 60 seconds when 429 response has no header', async () => {
+    const headers = {
+      get: jest.fn().mockReturnValue(null),
+    };
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      headers,
+      json: () => Promise.resolve({}),
+    });
+
+    await expect(appraise('data', 'guest')).rejects.toMatchObject({
+      errorType: 'RATE_LIMIT',
+      retryAfterSeconds: 60,
     });
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });

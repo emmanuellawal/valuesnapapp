@@ -66,7 +66,11 @@ export default function CameraScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadKey, setUploadKey] = useState(0);
   const [guestValuationCount, setGuestValuationCount] = useState(0);
-  const [error, setError] = useState<{ type: ErrorType; message?: string } | null>(null);
+  const [error, setError] = useState<{
+    type: ErrorType;
+    message?: string;
+    retryAfterSeconds?: number;
+  } | null>(null);
   const [lastResult, setLastResult] = useState<{
     item: ItemDetails;
     market: MarketData;
@@ -215,7 +219,11 @@ export default function CameraScreen() {
       isProcessingRef.current = false;
       setIsProcessing(false);
       if (err instanceof AppraiseError) {
-        const nextError = { type: err.errorType, message: err.message };
+        const nextError = {
+          type: err.errorType,
+          message: err.message,
+          retryAfterSeconds: err.retryAfterSeconds,
+        };
         errorTypeRef.current = nextError.type;
         setError(nextError);
       } else {
@@ -287,6 +295,12 @@ export default function CameraScreen() {
     );
   }
 
+  const isRateLimitError = error?.type === 'RATE_LIMIT';
+  const retryMinutes = Math.ceil((error?.retryAfterSeconds ?? 60) / 60);
+  const rateLimitSuggestions = [
+    `Try again in ${retryMinutes} minute${retryMinutes === 1 ? '' : 's'}`,
+  ];
+
   return (
     <ScreenContainer>
       {/* Header — dramatic typographic hierarchy */}
@@ -332,11 +346,15 @@ export default function CameraScreen() {
           <Stack gap={4}>
             <ErrorState
               errorType={error.type}
-              onRetry={handleRetry}
-              fallbackLink={{
-                text: 'Search eBay manually',
-                href: buildEbaySearchUrl(),
-              }}
+              suggestions={isRateLimitError ? rateLimitSuggestions : undefined}
+              onRetry={isRateLimitError ? undefined : handleRetry}
+              onDismiss={isRateLimitError ? () => setError(null) : undefined}
+              fallbackLink={isRateLimitError
+                ? (isGuest ? { text: 'Create a free account', href: '/auth/register' } : undefined)
+                : {
+                  text: 'Search eBay manually',
+                  href: buildEbaySearchUrl(),
+                }}
             />
             <NetworkBanner errorType={error.type} isOnline={isOnline} />
           </Stack>

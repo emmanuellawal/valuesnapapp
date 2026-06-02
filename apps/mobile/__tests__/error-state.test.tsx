@@ -6,16 +6,23 @@ jest.mock('expo-web-browser', () => ({
   openBrowserAsync: jest.fn().mockResolvedValue({ type: 'opened' }),
 }));
 
+jest.mock('expo-router', () => ({
+  useRouter: jest.fn(),
+}));
+
 import * as WebBrowser from 'expo-web-browser';
+import { useRouter } from 'expo-router';
 import { ErrorState } from '@/components/molecules/error-state';
 import { ConfidenceWarning } from '@/components/molecules/confidence-warning';
 
 const mockOpenBrowser = WebBrowser.openBrowserAsync as jest.Mock;
+const mockUseRouter = useRouter as jest.Mock;
 
 describe('ErrorState fallback link onPress (Story 5.5-9)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     Platform.OS = 'ios';
+    mockUseRouter.mockReturnValue({ push: jest.fn() });
   });
 
   it('opens the fallback URL via WebBrowser.openBrowserAsync on native', async () => {

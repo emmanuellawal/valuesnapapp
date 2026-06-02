@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 DELETE_ACCOUNT_RATE_LIMIT = RateLimitRule.parse("5/hour")
 MIGRATE_GUEST_RATE_LIMIT = RateLimitRule.parse("10/hour")
 GET_VALUATIONS_RATE_LIMIT = RateLimitRule.parse("120/minute")
+APPRAISE_RATE_LIMIT_GUEST = RateLimitRule.parse("10/hour")
+APPRAISE_RATE_LIMIT_AUTH = RateLimitRule.parse("100/hour")
 
 app = FastAPI(title="ValueSnap Engine")
 
@@ -31,6 +33,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Retry-After"],
 )
 
 
@@ -139,6 +142,10 @@ async def appraise_item(http_request: Request, request: AnalyzeRequest):
     """
     idempotency_key = _extract_idempotency_key(http_request)
     principal_type, principal_id = _resolve_appraise_principal(http_request, request)
+    appraise_rate_rule = (
+        APPRAISE_RATE_LIMIT_AUTH if principal_type == "user" else APPRAISE_RATE_LIMIT_GUEST
+    )
+    enforce_user_rate_limit(principal_id, "appraise", appraise_rate_rule)
     idempotency_repo = None
 
     if idempotency_key:

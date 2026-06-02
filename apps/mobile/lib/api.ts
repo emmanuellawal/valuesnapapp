@@ -21,6 +21,7 @@ export class AppraiseError extends Error {
   constructor(
     public readonly errorType: ErrorType,
     message: string,
+    public readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = 'AppraiseError';
@@ -162,7 +163,12 @@ export async function appraise(
     let message = `Request failed with status ${response.status}`;
 
     if (response.status === 429) {
-      throw new AppraiseError('RATE_LIMIT', 'Too many requests');
+      const retryAfterRaw = response.headers?.get?.('Retry-After');
+      const parsedRetryAfter = Number.parseInt(retryAfterRaw ?? '', 10);
+      const retryAfterSeconds = Number.isFinite(parsedRetryAfter) && parsedRetryAfter > 0
+        ? parsedRetryAfter
+        : 60;
+      throw new AppraiseError('RATE_LIMIT', 'Too many requests', retryAfterSeconds);
     }
 
     try {

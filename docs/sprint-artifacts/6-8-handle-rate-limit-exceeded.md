@@ -1,6 +1,6 @@
 # Story 6.8: Handle Rate Limit Exceeded
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -19,32 +19,32 @@ so that I understand why appraisal isn't working and know how long to wait befor
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Enforce rate limit on backend appraise endpoint (AC: #6)
-  - [ ] 1.1 Add two rate limit constants in `backend/main.py` per PRD NFR-S8: `APPRAISE_RATE_LIMIT_GUEST = RateLimitRule.parse("10/hour")` and `APPRAISE_RATE_LIMIT_AUTH = RateLimitRule.parse("100/hour")`
-  - [ ] 1.2 In `appraise_item()`, after `_resolve_appraise_principal()`, select the correct rule: `rule = APPRAISE_RATE_LIMIT_AUTH if principal_type == "user" else APPRAISE_RATE_LIMIT_GUEST`; then call `enforce_user_rate_limit(principal_id, "appraise", rule)` before the idempotency check
-  - [ ] 1.3 Add `expose_headers=["Retry-After"]` to the `CORSMiddleware` configuration in `backend/main.py` — without this, cross-origin web clients receive `null` from `response.headers.get('Retry-After')` even when the header is present
+- [x] Task 1: Enforce rate limit on backend appraise endpoint (AC: #6)
+  - [x] 1.1 Add two rate limit constants in `backend/main.py` per PRD NFR-S8: `APPRAISE_RATE_LIMIT_GUEST = RateLimitRule.parse("10/hour")` and `APPRAISE_RATE_LIMIT_AUTH = RateLimitRule.parse("100/hour")`
+  - [x] 1.2 In `appraise_item()`, after `_resolve_appraise_principal()`, select the correct rule: `rule = APPRAISE_RATE_LIMIT_AUTH if principal_type == "user" else APPRAISE_RATE_LIMIT_GUEST`; then call `enforce_user_rate_limit(principal_id, "appraise", rule)` before the idempotency check
+  - [x] 1.3 Add `expose_headers=["Retry-After"]` to the `CORSMiddleware` configuration in `backend/main.py` — without this, cross-origin web clients receive `null` from `response.headers.get('Retry-After')` even when the header is present
 
-- [ ] Task 2: Propagate `Retry-After` from 429 response in api client (AC: #2)
-  - [ ] 2.1 Add `retryAfterSeconds?: number` as an optional third parameter to `AppraiseError` constructor in `apps/mobile/lib/api.ts`
-  - [ ] 2.2 When `response.status === 429`, read the `Retry-After` response header and parse it as an integer; if absent or non-numeric, default to `60`; pass as: `new AppraiseError('RATE_LIMIT', 'Too many requests', retryAfterSeconds)`
+- [x] Task 2: Propagate `Retry-After` from 429 response in api client (AC: #2)
+  - [x] 2.1 Add `retryAfterSeconds?: number` as an optional third parameter to `AppraiseError` constructor in `apps/mobile/lib/api.ts`
+  - [x] 2.2 When `response.status === 429`, read the `Retry-After` response header and parse it as an integer; if absent or non-numeric, default to `60`; pass as: `new AppraiseError('RATE_LIMIT', 'Too many requests', retryAfterSeconds)`
 
-- [ ] Task 3: Update `ErrorState` RATE_LIMIT copy to meet AC (AC: #1, #4)
-  - [ ] 3.1 In `apps/mobile/components/molecules/error-state.tsx`, change `RATE_LIMIT.title` from `'Too many requests'` to `'You've reached your limit'`
-  - [ ] 3.2 Update default `RATE_LIMIT.suggestions` to `['Please wait before trying again']` (used as fallback when no `Retry-After` is available)
+- [x] Task 3: Update `ErrorState` RATE_LIMIT copy to meet AC (AC: #1, #4)
+  - [x] 3.1 In `apps/mobile/components/molecules/error-state.tsx`, change `RATE_LIMIT.title` from `'Too many requests'` to `'You've reached your limit'`
+  - [x] 3.2 Update default `RATE_LIMIT.suggestions` to `['Please wait before trying again']` (used as fallback when no `Retry-After` is available)
 
-- [ ] Task 4: Capture `retryAfterSeconds` in camera error state (AC: #2)
-  - [ ] 4.1 Extend the `error` state type in `apps/mobile/app/(tabs)/camera.tsx` to `{ type: ErrorType; message?: string; retryAfterSeconds?: number } | null`
-  - [ ] 4.2 In `handlePhotoCapture` error handling, when `err instanceof AppraiseError` and `err.errorType === 'RATE_LIMIT'`, store `err.retryAfterSeconds` on the error state alongside `type` and `message`
+- [x] Task 4: Capture `retryAfterSeconds` in camera error state (AC: #2)
+  - [x] 4.1 Extend the `error` state type in `apps/mobile/app/(tabs)/camera.tsx` to `{ type: ErrorType; message?: string; retryAfterSeconds?: number } | null`
+  - [x] 4.2 In `handlePhotoCapture` error handling, when `err instanceof AppraiseError` and `err.errorType === 'RATE_LIMIT'`, store `err.retryAfterSeconds` on the error state alongside `type` and `message`
 
-- [ ] Task 5: Wire RATE_LIMIT render in camera screen (AC: #1, #2, #3, #5)
-  - [ ] 5.1 Compute suggestions from `error.retryAfterSeconds`: `const retryMinutes = Math.ceil(error.retryAfterSeconds / 60)` → pass `suggestions={[\`Try again in ${retryMinutes} minute${retryMinutes === 1 ? '' : 's'}\`]}` to `ErrorState`
-  - [ ] 5.2 Omit `onRetry` when `error.type === 'RATE_LIMIT'` (hides retry button per AC #5); pass `onDismiss={() => setError(null)}` — renders a secondary `"OK, got it"` button via the new `onDismiss` prop; without this the screen is soft-bricked with no way to return to the camera
-  - [ ] 5.3 Pass `fallbackLink={{ text: 'Create a free account', href: '/auth/register' }}` when `isGuest === true && error.type === 'RATE_LIMIT'`; omit for authenticated users (AC #3)
+- [x] Task 5: Wire RATE_LIMIT render in camera screen (AC: #1, #2, #3, #5)
+  - [x] 5.1 Compute suggestions from `error.retryAfterSeconds`: `const retryMinutes = Math.ceil(error.retryAfterSeconds / 60)` → pass `suggestions={[\`Try again in ${retryMinutes} minute${retryMinutes === 1 ? '' : 's'}\`]}` to `ErrorState`
+  - [x] 5.2 Omit `onRetry` when `error.type === 'RATE_LIMIT'` (hides retry button per AC #5); pass `onDismiss={() => setError(null)}` — renders a secondary `"OK, got it"` button via the new `onDismiss` prop; without this the screen is soft-bricked with no way to return to the camera
+  - [x] 5.3 Pass `fallbackLink={{ text: 'Create a free account', href: '/auth/register' }}` when `isGuest === true && error.type === 'RATE_LIMIT'`; omit for authenticated users (AC #3)
 
-- [ ] Task 6: Unit tests (AC: all)
-  - [ ] 6.1 In `apps/mobile/__tests__/api.test.ts`, add test: HTTP 429 with `Retry-After: 2700` header → thrown `AppraiseError` has `errorType === 'RATE_LIMIT'` and `retryAfterSeconds === 2700`
-  - [ ] 6.2 In `apps/mobile/__tests__/api.test.ts`, add test: HTTP 429 without `Retry-After` header → `retryAfterSeconds === 60` (default)
-  - [ ] 6.3 Create `apps/mobile/__tests__/camera-rate-limit.story-6-8.test.tsx` with the following tests:
+- [x] Task 6: Unit tests (AC: all)
+  - [x] 6.1 In `apps/mobile/__tests__/api.test.ts`, add test: HTTP 429 with `Retry-After: 2700` header → thrown `AppraiseError` has `errorType === 'RATE_LIMIT'` and `retryAfterSeconds === 2700`
+  - [x] 6.2 In `apps/mobile/__tests__/api.test.ts`, add test: HTTP 429 without `Retry-After` header → `retryAfterSeconds === 60` (default)
+  - [x] 6.3 Create `apps/mobile/__tests__/camera-rate-limit.story-6-8.test.tsx` with the following tests:
     - `'shows rate limit error with retry time for authenticated user'` — mock isGuest=false, RATE_LIMIT error with `retryAfterSeconds: 2700`; verify "You've reached your limit" and "Try again in 45 minutes" rendered; verify no retry button; verify no "Create a free account" link
     - `'shows upgrade CTA for guest users'` — mock isGuest=true, RATE_LIMIT error with `retryAfterSeconds: 1800`; verify "Create a free account" link is rendered; verify "Try again in 30 minutes" shown
     - `'shows fallback time when Retry-After uses default'` — mock RATE_LIMIT error with `retryAfterSeconds: 60` (default); verify "Try again in 1 minute" renders
@@ -142,10 +142,35 @@ const rateLimitFallback = isGuest
 
 ### Agent Model Used
 
-Claude Sonnet 4.6
+GPT-5.3-Codex
 
 ### Debug Log References
 
+- `cd apps/mobile && npm test -- --runInBand __tests__/api.test.ts __tests__/camera-rate-limit.story-6-8.test.tsx`
+- `cd apps/mobile && npm test -- --runInBand __tests__/api.test.ts __tests__/camera-rate-limit.story-6-8.test.tsx __tests__/error-state.test.tsx __tests__/camera-offline-appraise-error.story-6-4.test.tsx`
+- `cd apps/mobile && npm test -- --runInBand`
+- `cd backend && pytest -q` (blocked in current environment by missing Python dependencies: `fastapi`, `pydantic`, `supabase`, `httpx`)
+
 ### Completion Notes List
 
+- Added appraise endpoint rate limiting with guest/auth tier rules and exposed `Retry-After` header via CORS.
+- Extended `AppraiseError` to carry `retryAfterSeconds` and parsed `Retry-After` with a 60-second fallback.
+- Updated RATE_LIMIT UI copy to "You've reached your limit" and added an explicit dismiss action in `ErrorState`.
+- Wired camera RATE_LIMIT rendering: dynamic wait-time suggestion, retry suppression, dismiss action, and guest upgrade CTA.
+- Added Story 6.8 regression tests for API 429 header handling and camera rate-limit UX.
+- Verified mobile regression safety with full suite pass (`40/40` suites, `357/357` tests).
+
 ### File List
+
+- `backend/main.py`
+- `apps/mobile/lib/api.ts`
+- `apps/mobile/components/molecules/error-state.tsx`
+- `apps/mobile/app/(tabs)/camera.tsx`
+- `apps/mobile/__tests__/api.test.ts`
+- `apps/mobile/__tests__/camera-rate-limit.story-6-8.test.tsx`
+- `apps/mobile/__tests__/error-state.test.tsx`
+
+### Change Log
+
+- Added Story 6.8 implementation for backend 429 enforcement + frontend/user-facing rate-limit UX.
+- Added new tests and passed full mobile regression suite.

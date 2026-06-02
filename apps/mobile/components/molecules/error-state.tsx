@@ -1,6 +1,7 @@
 import React from 'react';
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
+import { useRouter } from 'expo-router';
 
 import { Box, Stack, Text, SwissPressable } from '@/components/primitives';
 
@@ -49,10 +50,9 @@ const ERROR_CONFIG: Record<ErrorType, { title: string; suggestions: string[] }> 
     ],
   },
   RATE_LIMIT: {
-    title: 'Too many requests',
+    title: 'You\'ve reached your limit',
     suggestions: [
-      'Please wait a moment before trying again',
-      'Try again in a few minutes',
+      'Please wait before trying again',
     ],
   },
   GENERIC_ERROR: {
@@ -88,6 +88,12 @@ export interface ErrorStateProps {
    * If not provided, retry button is hidden.
    */
   onRetry?: () => void;
+
+  /**
+   * Callback for dismissing the current error.
+   * If not provided, dismiss button is hidden.
+   */
+  onDismiss?: () => void;
   
   /**
    * Fallback link configuration.
@@ -157,8 +163,10 @@ export function ErrorState({
   title,
   suggestions,
   onRetry,
+  onDismiss,
   fallbackLink,
 }: ErrorStateProps) {
+  const router = useRouter();
   const config = ERROR_CONFIG[errorType];
   const displayTitle = title ?? config.title;
   const displaySuggestions = suggestions ?? config.suggestions;
@@ -206,20 +214,45 @@ export function ErrorState({
             </Box>
           </SwissPressable>
         )}
+
+        {onDismiss && (
+          <SwissPressable
+            onPress={onDismiss}
+            accessibilityLabel="Dismiss error message"
+            accessibilityRole="button"
+          >
+            <Text variant="body" className="text-ink underline">
+              OK, got it
+            </Text>
+          </SwissPressable>
+        )}
         
         {/* Fallback link - secondary action */}
         {fallbackLink && (
+          (() => {
+            const isInternalLink = fallbackLink.href.startsWith('/');
+            const accessibilityLabel = isInternalLink
+              ? fallbackLink.text
+              : `${fallbackLink.text} (opens in new tab)`;
+
+            return (
           <SwissPressable 
             onPress={() => {
+              if (isInternalLink) {
+                router.push(fallbackLink.href as any);
+                return;
+              }
               openUrl(fallbackLink.href).catch((e) => console.warn('fallbackLink onPress', e));
             }}
-            accessibilityLabel={`${fallbackLink.text} (opens in new tab)`}
+            accessibilityLabel={accessibilityLabel}
             accessibilityRole="link"
           >
             <Text variant="body" className="text-ink underline">
               {fallbackLink.text}
             </Text>
           </SwissPressable>
+            );
+          })()
         )}
       </Stack>
     </Stack>
