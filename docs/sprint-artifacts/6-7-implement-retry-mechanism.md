@@ -1,6 +1,6 @@
 # Story 6.7: Implement Retry Mechanism
 
-Status: review
+Status: done
 
 ## Story
 
@@ -241,3 +241,46 @@ GPT-5.3-Codex (GitHub Copilot)
 - `apps/mobile/app/(tabs)/camera.tsx`
 - `apps/mobile/__tests__/camera-offline-appraise-error.story-6-4.test.tsx`
 - `docs/sprint-artifacts/6-7-implement-retry-mechanism.md`
+
+## Senior Developer Review (AI)
+
+**Reviewer:** GPT-5.4  
+**Date:** 2026-05-31  
+**Outcome:** Changes Requested (Resolved)
+
+### Files Reviewed
+
+- `apps/mobile/app/(tabs)/camera.tsx`
+- `apps/mobile/__tests__/camera-offline-appraise-error.story-6-4.test.tsx`
+- `docs/sprint-artifacts/6-7-implement-retry-mechanism.md`
+
+### Validation Run
+
+- `npm test -- --runInBand __tests__/camera-offline-appraise-error.story-6-4.test.tsx` — pass
+
+### Findings
+
+1. **MEDIUM — Auto-retry can double-submit when connectivity restores and the user manually taps Retry before the effect flushes.**  
+  The new auto-retry logic in `camera.tsx` is guarded with `error?.type` and `isProcessing`, but those values are captured from the render that first sees `isOnline === true`. Because this is a passive `useEffect`, there is a short post-paint window where the user can still press the existing Retry CTA. If that manual retry starts before the queued effect runs, the effect still sees the stale `NETWORK_ERROR` / `!isProcessing` snapshot and invokes `handleRetryRef.current()` a second time, producing two `appraise()` submissions for the same recovered connection event. The handler ref avoids a stale function identity, but it does not protect against stale state for the effect guards. This path needs either current-state refs for the guard values or another one-shot suppression mechanism before the story can be approved.
+
+### Follow-up Resolution
+
+The race was remediated in `camera.tsx` by:
+- adding current-state guard refs (`errorTypeRef`, `isProcessingRef`) used by the auto-retry effect,
+- adding one-shot restore-edge suppression when manual retry fires first,
+- adding a same-tick dispatch lock to prevent duplicate manual+auto submit on the same connectivity restoration event.
+
+Regression coverage was added in `camera-offline-appraise-error.story-6-4.test.tsx`:
+- `does not double-submit when online restores and user taps Retry immediately`
+
+Validation after fix:
+- `npm test -- --runInBand __tests__/camera-offline-appraise-error.story-6-4.test.tsx` — pass (5/5)
+- `npm run lint -- --max-warnings 0` — pass
+
+### Final Review Pass
+
+**Reviewer:** GPT-5.3-Codex  
+**Date:** 2026-05-31  
+**Outcome:** Approved
+
+No blocking issues remain in Story 6.7 scope.

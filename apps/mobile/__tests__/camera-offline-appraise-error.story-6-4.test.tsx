@@ -181,4 +181,45 @@ describe('Story 6.4 appraisal error mapping', () => {
     expect(mockAppraise).toHaveBeenCalledTimes(2);
     expect(renderer!.root.findByProps({ children: 'Connection failed' })).toBeTruthy();
   });
+
+  it('does not double-submit when online restores and user taps Retry immediately', async () => {
+    mockAppraise.mockRejectedValue(
+      new AppraiseError('NETWORK_ERROR', 'Unable to reach server'),
+    );
+    mockUseOnlineStatus.mockReturnValue(true);
+
+    let renderer: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(<CameraScreen />);
+    });
+
+    const triggerCapture = renderer!.root.findByProps({ testID: 'camera-capture' });
+    await act(async () => {
+      await triggerCapture.props.onPress();
+    });
+
+    // First attempt failed and set NETWORK_ERROR
+    expect(mockAppraise).toHaveBeenCalledTimes(1);
+    expect(renderer!.root.findByProps({ children: 'Connection failed' })).toBeTruthy();
+
+    // Simulate Wi-Fi dropping
+    mockUseOnlineStatus.mockReturnValue(false);
+    await act(async () => {
+      renderer!.update(<CameraScreen />);
+    });
+
+    // Simulate Wi-Fi restoring and user tapping Retry before passive effects flush.
+    await act(async () => {
+      mockUseOnlineStatus.mockReturnValue(true);
+      renderer!.update(<CameraScreen />);
+      const retryButton = renderer!.root.findByProps({
+        accessibilityLabel: 'Try again to identify item',
+      });
+      await retryButton.props.onPress();
+    });
+
+    // Initial failure + one manual retry only (no extra auto-retry duplicate)
+    expect(mockAppraise).toHaveBeenCalledTimes(2);
+    expect(renderer!.root.findByProps({ children: 'Connection failed' })).toBeTruthy();
+  });
 });

@@ -86,6 +86,15 @@ export default function CameraScreen() {
   const isOnline = useOnlineStatus();
   // Track online transitions so auto-retry only fires on false -> true.
   const prevIsOnlineRef = useRef(isOnline);
+  // One-shot suppression for the restore edge when user manually retries first.
+  const skipNextAutoRetryRef = useRef(false);
+  // Prevent same-tick double dispatch from manual + auto retry paths.
+  const retryDispatchLockRef = useRef(false);
+  // Keep current guard state in refs so effects can avoid stale render values.
+  const isProcessingRef = useRef(isProcessing);
+  isProcessingRef.current = isProcessing;
+  const errorTypeRef = useRef<ErrorType | null>(error?.type ?? null);
+  errorTypeRef.current = error?.type ?? null;
 
   // Progress tracking for multi-stage feedback
   const { stage, stageProgress, isOvertime, complete } = useProgressStages({
@@ -96,8 +105,22 @@ export default function CameraScreen() {
    * Handle retry - re-process the same photo without re-uploading
    */
   const handleRetry = async () => {
-    if (!lastPhotoRef.current) return;
-    
+    if (!lastPhotoRef.current || isProcessingRef.current || retryDispatchLockRef.current) return;
+
+    retryDispatchLockRef.current = true;
+    setTimeout(() => {
+      retryDispatchLockRef.current = false;
+    }, 0);
+
+    // If we're on the restore edge (false -> true before effect flush),
+    // let this manual retry consume that edge and skip auto-retry once.
+    if (isOnline && !prevIsOnlineRef.current) {
+      skipNextAutoRetryRef.current = true;
+    }
+
+    // Close the post-paint race window before queued effects flush.
+    isProcessingRef.current = true;
+    errorTypeRef.current = null;
     setError(null);
     await handlePhotoCapture(lastPhotoRef.current);
   };
@@ -111,14 +134,34 @@ export default function CameraScreen() {
     const wasOffline = !prevIsOnlineRef.current;
     prevIsOnlineRef.current = isOnline;
 
-    if (isOnline && wasOffline && error?.type === 'NETWORK_ERROR' && !isProcessing && lastPhotoRef.current) {
+    if (!isOnline) {
+      skipNextAutoRetryRef.current = false;
+      return;
+    }
+
+    if (
+      isOnline &&
+      wasOffline &&
+      !skipNextAutoRetryRef.current &&
+      !retryDispatchLockRef.current &&
+      errorTypeRef.current === 'NETWORK_ERROR' &&
+      !isProcessingRef.current &&
+      lastPhotoRef.current
+    ) {
       void handleRetryRef.current();
     }
-  }, [isOnline, error?.type, isProcessing]);
+
+    // Consume one-shot suppression after the restore edge is processed.
+    if (wasOffline) {
+      skipNextAutoRetryRef.current = false;
+    }
+  }, [isOnline]);
 
   const handlePhotoCapture = async (photo: CapturedPhoto) => {
     // Store photo for potential retry
     lastPhotoRef.current = photo;
+    errorTypeRef.current = null;
+    isProcessingRef.current = true;
     setError(null);
     setLastResult(null);
     setIsProcessing(true);
@@ -136,6 +179,7 @@ export default function CameraScreen() {
       
       // Mark progress as complete before hiding
       complete();
+      isProcessingRef.current = false;
       setIsProcessing(false);
       
       // Reset FileUpload component by incrementing key
@@ -168,10 +212,14 @@ export default function CameraScreen() {
         // Best-effort local persistence should not block the UI.
       }
     } catch (err) {
+      isProcessingRef.current = false;
       setIsProcessing(false);
       if (err instanceof AppraiseError) {
-        setError({ type: err.errorType, message: err.message });
+        const nextError = { type: err.errorType, message: err.message };
+        errorTypeRef.current = nextError.type;
+        setError(nextError);
       } else {
+        errorTypeRef.current = 'GENERIC_ERROR';
         setError({ type: 'GENERIC_ERROR', message: 'Something went wrong' });
       }
     }
