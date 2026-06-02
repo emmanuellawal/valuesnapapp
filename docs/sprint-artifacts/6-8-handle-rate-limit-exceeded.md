@@ -32,17 +32,19 @@ so that I understand why appraisal isn't working and know how long to wait befor
   - [ ] 3.1 In `apps/mobile/components/molecules/error-state.tsx`, change `RATE_LIMIT.title` from `'Too many requests'` to `'You've reached your limit'`
   - [ ] 3.2 Update default `RATE_LIMIT.suggestions` to `['Please wait before trying again']` (used as fallback when no `Retry-After` is available)
 
-- [ ] Task 4: Extend camera error state and wire dynamic suggestions (AC: #1, #2, #3, #5)
+- [ ] Task 4: Capture `retryAfterSeconds` in camera error state (AC: #2)
   - [ ] 4.1 Extend the `error` state type in `apps/mobile/app/(tabs)/camera.tsx` to `{ type: ErrorType; message?: string; retryAfterSeconds?: number } | null`
-  - [ ] 4.2 In `handlePhotoCapture` error handling, when `err instanceof AppraiseError` and `err.errorType === 'RATE_LIMIT'`, store `err.retryAfterSeconds` on the error state
-  - [ ] 4.3 When `error.type === 'RATE_LIMIT'`, pass `suggestions={[\`Try again in ${Math.ceil(error.retryAfterSeconds / 60)} minutes\`]}` to `ErrorState` (no guest text here — see 4.5)
-  - [ ] 4.4 When `error.type === 'RATE_LIMIT'`, do not pass `onRetry` (hides retry button per AC #5). Pass `onDismiss={() => setError(null)}` instead — a new optional prop on `ErrorState` that renders a secondary `"OK, got it"` text button; without it the user is soft-bricked on the error screen with no way back to the camera
-  - [ ] 4.5 For guest users (`isGuest === true`) with `RATE_LIMIT` error, pass `fallbackLink={{ text: 'Create a free account', href: '/auth/register' }}` to `ErrorState` — renders as a tappable link to sign-up (per AC #3); omit for authenticated users
+  - [ ] 4.2 In `handlePhotoCapture` error handling, when `err instanceof AppraiseError` and `err.errorType === 'RATE_LIMIT'`, store `err.retryAfterSeconds` on the error state alongside `type` and `message`
 
-- [ ] Task 5: Unit tests (AC: all)
-  - [ ] 5.1 In `apps/mobile/__tests__/api.test.ts`, add test: HTTP 429 with `Retry-After: 2700` header → thrown `AppraiseError` has `errorType === 'RATE_LIMIT'` and `retryAfterSeconds === 2700`
-  - [ ] 5.2 In `apps/mobile/__tests__/api.test.ts`, add test: HTTP 429 without `Retry-After` header → `retryAfterSeconds === 60` (default)
-  - [ ] 5.3 Create `apps/mobile/__tests__/camera-rate-limit.story-6-8.test.tsx` with the following tests:
+- [ ] Task 5: Wire RATE_LIMIT render in camera screen (AC: #1, #2, #3, #5)
+  - [ ] 5.1 Compute suggestions from `error.retryAfterSeconds`: `const retryMinutes = Math.ceil(error.retryAfterSeconds / 60)` → pass `suggestions={[\`Try again in ${retryMinutes} minute${retryMinutes === 1 ? '' : 's'}\`]}` to `ErrorState`
+  - [ ] 5.2 Omit `onRetry` when `error.type === 'RATE_LIMIT'` (hides retry button per AC #5); pass `onDismiss={() => setError(null)}` — renders a secondary `"OK, got it"` button via the new `onDismiss` prop; without this the screen is soft-bricked with no way to return to the camera
+  - [ ] 5.3 Pass `fallbackLink={{ text: 'Create a free account', href: '/auth/register' }}` when `isGuest === true && error.type === 'RATE_LIMIT'`; omit for authenticated users (AC #3)
+
+- [ ] Task 6: Unit tests (AC: all)
+  - [ ] 6.1 In `apps/mobile/__tests__/api.test.ts`, add test: HTTP 429 with `Retry-After: 2700` header → thrown `AppraiseError` has `errorType === 'RATE_LIMIT'` and `retryAfterSeconds === 2700`
+  - [ ] 6.2 In `apps/mobile/__tests__/api.test.ts`, add test: HTTP 429 without `Retry-After` header → `retryAfterSeconds === 60` (default)
+  - [ ] 6.3 Create `apps/mobile/__tests__/camera-rate-limit.story-6-8.test.tsx` with the following tests:
     - `'shows rate limit error with retry time for authenticated user'` — mock isGuest=false, RATE_LIMIT error with `retryAfterSeconds: 2700`; verify "You've reached your limit" and "Try again in 45 minutes" rendered; verify no retry button; verify no "Create a free account" link
     - `'shows upgrade CTA for guest users'` — mock isGuest=true, RATE_LIMIT error with `retryAfterSeconds: 1800`; verify "Create a free account" link is rendered; verify "Try again in 30 minutes" shown
     - `'shows fallback time when Retry-After uses default'` — mock RATE_LIMIT error with `retryAfterSeconds: 60` (default); verify "Try again in 1 minute" renders
@@ -73,7 +75,7 @@ The backend currently has **no rate limit** on `/api/appraise` — the enforceme
 | `backend/main.py` | Add `APPRAISE_RATE_LIMIT` constant; call `enforce_user_rate_limit` in `appraise_item()` |
 | `apps/mobile/lib/api.ts` | Add `retryAfterSeconds` to `AppraiseError`; parse `Retry-After` header on 429 |
 | `apps/mobile/components/molecules/error-state.tsx` | Update `RATE_LIMIT.title` and default suggestions copy; add `onDismiss?: () => void` prop |
-| `apps/mobile/app/(tabs)/camera.tsx` | Extend error state type; store `retryAfterSeconds`; compute dynamic suggestions; suppress retry button |
+| `apps/mobile/app/(tabs)/camera.tsx` | Extend error state type (Task 4); wire RATE_LIMIT render — suggestions, suppress retry, onDismiss, guest fallbackLink (Task 5) |
 | `apps/mobile/__tests__/api.test.ts` | Add 2 tests: 429 with/without `Retry-After` header |
 | `apps/mobile/__tests__/camera-rate-limit.story-6-8.test.tsx` | New file: 3 camera rate limit UX tests |
 
