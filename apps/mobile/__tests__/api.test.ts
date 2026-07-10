@@ -101,8 +101,8 @@ describe('appraise', () => {
     await jest.advanceTimersByTimeAsync(3_000);
 
     await assertion;
-    // 1 initial attempt + 2 retries
-    expect(global.fetch).toHaveBeenCalledTimes(3);
+    // 1 initial attempt + 1 retry (appraise uses retries: 1)
+    expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
   it('maps HTTP 422 with AI error code to AI_IDENTIFICATION_FAILED', async () => {

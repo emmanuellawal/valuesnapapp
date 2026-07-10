@@ -7,6 +7,7 @@ import { ListingForm } from '@/components/organisms';
 import { Box, ScreenContainer, SwissPressable, Text } from '@/components/primitives';
 import { useAuth } from '@/contexts/AuthContext';
 import { getLocalHistory } from '@/lib/localHistory';
+import { fetchServerValuationById } from '@/lib/migration';
 import { uploadListingPhoto } from '@/lib/storage';
 import { buildAiListingTitle, mapVisualConditionToListingCondition } from '@/lib/utils';
 import type { Valuation } from '@/types/valuation';
@@ -18,7 +19,7 @@ function normalizeRouteParam(value: string | string[] | undefined): string | und
 export default function ListingScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string | string[] }>();
-  const { isGuest, user } = useAuth();
+  const { isGuest, user, accessToken } = useAuth();
   const valuationId = normalizeRouteParam(id);
   const [valuation, setValuation] = useState<Valuation | null | undefined>(undefined);
   const [hostedPhotoUrl, setHostedPhotoUrl] = useState<string | undefined>(undefined);
@@ -38,15 +39,42 @@ export default function ListingScreen() {
       return;
     }
 
-    getLocalHistory()
-      .then((history) => {
-        const foundValuation = findValuationById(history, valuationId);
-        setValuation(foundValuation ?? null);
-      })
-      .catch(() => {
+    let cancelled = false;
+
+    (async () => {
+      const history = await getLocalHistory();
+      const local = findValuationById(history, valuationId);
+      if (cancelled) return;
+
+      if (local) {
+        setValuation(local);
+        return;
+      }
+
+      if (accessToken) {
+        try {
+          const serverValuation = await fetchServerValuationById(accessToken, valuationId);
+          if (!cancelled) {
+            setValuation(serverValuation);
+          }
+        } catch {
+          if (!cancelled) {
+            setValuation(null);
+          }
+        }
+      } else if (!cancelled) {
         setValuation(null);
-      });
-  }, [valuationId]);
+      }
+    })().catch(() => {
+      if (!cancelled) {
+        setValuation(null);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [valuationId, accessToken]);
 
   useEffect(() => {
     const imageUri = valuation?.imageUri;

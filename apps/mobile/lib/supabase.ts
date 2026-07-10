@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { env } from '@/lib/env';
 
@@ -11,30 +11,54 @@ const serverSafeStorage = {
 
 const authStorage = typeof window === 'undefined' ? serverSafeStorage : AsyncStorage;
 
-// Supabase client singleton for the mobile app.
-// Uses the ANON (public) key — never the service role key.
-// AsyncStorage provides session persistence on React Native (no browser cookies).
-//
-// IMPORTANT: env.supabaseUrl and env.supabaseAnonKey are validated at startup
-// by validateEnv() in app/_layout.tsx when useMock=false. The non-null assertion
-// is safe because the app throws before this code path runs if either var is missing.
-export const supabase = createClient(
-  env.supabaseUrl!,
-  env.supabaseAnonKey!,
-  {
+let client: SupabaseClient | null = null;
+
+function resolveSupabaseConfig(): { url: string; anonKey: string } {
+  const url = env.supabaseUrl;
+  const anonKey = env.supabaseAnonKey;
+
+  if (!url || !anonKey) {
+    if (env.useMock || env.demo) {
+      return {
+        url: url ?? 'https://placeholder.supabase.co',
+        anonKey: anonKey ?? 'placeholder-anon-key',
+      };
+    }
+    throw new Error(
+      'Supabase is not configured. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY.',
+    );
+  }
+
+  return { url, anonKey };
+}
+
+export function getSupabaseClient(): SupabaseClient {
+  if (client) {
+    return client;
+  }
+
+  const { url, anonKey } = resolveSupabaseConfig();
+
+  client = createClient(url, anonKey, {
     auth: {
       storage: authStorage,
       autoRefreshToken: true,
       persistSession: true,
-      // Required for React Native — there is no browser URL bar to detect session
-      // tokens from. Omitting this (or setting true) causes silent auth failures.
       detectSessionInUrl: false,
+      flowType: 'pkce',
     },
+  });
+
+  return client;
+}
+
+// Lazy proxy so module import does not crash before validateEnv().
+export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
+  get(_target, prop, receiver) {
+    const value = Reflect.get(getSupabaseClient(), prop, receiver);
+    return typeof value === 'function' ? value.bind(getSupabaseClient()) : value;
   },
-);
+});
 
 // Re-export Supabase auth types for use in Stories 4.2–4.11.
-// Note: Supabase's User type differs from the app's own User interface in
-// types/user.ts (which adds `tier` and `preferences`). Stories that bridge
-// these two types (e.g., 4.6 AuthContext) will need to handle the mapping.
 export type { User, Session } from '@supabase/supabase-js';

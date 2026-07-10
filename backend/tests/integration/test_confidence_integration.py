@@ -77,7 +77,7 @@ class TestConfidenceInApiFlow:
             new_callable=AsyncMock,
             return_value=mock_ai_high_confidence,
         ), patch(
-            "backend.main.search_sold_listings",
+            "backend.main.get_market_data_for_item",
             new_callable=AsyncMock,
             return_value=mock_ebay_high_confidence_data,
         ):
@@ -115,7 +115,7 @@ class TestConfidenceInApiFlow:
             new_callable=AsyncMock,
             return_value=mock_ai_high_confidence,
         ), patch(
-            "backend.main.search_sold_listings",
+            "backend.main.get_market_data_for_item",
             new_callable=AsyncMock,
             return_value=mock_ebay_high_confidence_data,
         ):
@@ -140,7 +140,7 @@ class TestConfidenceInApiFlow:
             new_callable=AsyncMock,
             return_value=mock_ai_high_confidence,
         ), patch(
-            "backend.main.search_sold_listings",
+            "backend.main.get_market_data_for_item",
             new_callable=AsyncMock,
             return_value=mock_ebay_low_confidence_data,
         ):
@@ -177,7 +177,7 @@ class TestConfidenceInApiFlow:
             new_callable=AsyncMock,
             return_value=mock_ai_high_confidence,
         ), patch(
-            "backend.main.search_sold_listings",
+            "backend.main.get_market_data_for_item",
             new_callable=AsyncMock,
             return_value=mock_fallback_data,
         ):
@@ -218,7 +218,7 @@ class TestConfidenceInApiFlow:
             new_callable=AsyncMock,
             return_value=mock_ai_high_confidence,
         ), patch(
-            "backend.main.search_sold_listings",
+            "backend.main.get_market_data_for_item",
             new_callable=AsyncMock,
             return_value=mock_low_data,
         ):
@@ -248,7 +248,7 @@ class TestConfidenceInApiFlow:
             new_callable=AsyncMock,
             return_value=mock_ai_high_confidence,
         ), patch(
-            "backend.main.search_sold_listings",
+            "backend.main.get_market_data_for_item",
             new_callable=AsyncMock,
             return_value=mock_ebay_high_confidence_data,
         ):
@@ -292,7 +292,7 @@ class TestConfidenceInApiFlow:
             new_callable=AsyncMock,
             return_value=mock_ai_high_confidence,
         ), patch(
-            "backend.main.search_sold_listings",
+            "backend.main.get_market_data_for_item",
             new_callable=AsyncMock,
             return_value=mock_cheap_item,
         ):

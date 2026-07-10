@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   View,
@@ -20,6 +19,7 @@ import {
   ScreenContainer,
 } from '@/components/primitives';
 import { FormInput } from '@/components/atoms';
+import { showAlert } from '@/lib/dialog';
 import { supabase } from '@/lib/supabase';
 import { env } from '@/lib/env';
 
@@ -103,10 +103,10 @@ export default function RegisterScreen() {
     // Mock mode: bypass Supabase, navigate to app for development testing
     if (env.useMock) {
       setSubmitState('idle');
-      Alert.alert(
+      showAlert(
         'Mock Mode',
         'Registration bypassed in mock mode.',
-        [{ text: 'OK', onPress: () => router.replace('/(tabs)') }],
+        [{ text: 'OK', onPress: () => router.replace('/') }],
       );
       return;
     }
@@ -126,7 +126,7 @@ export default function RegisterScreen() {
       if (data.session) {
         // Session active: onAuthStateChange(SIGNED_IN) has already fired.
         // AuthContext is now updated. Navigate to app.
-        router.replace('/(tabs)');
+        router.replace('/');
       } else {
         // Email confirmation required: session is null until user confirms.
         setSubmitState('confirm-email');
@@ -147,8 +147,8 @@ export default function RegisterScreen() {
     // Mock mode bypass
     if (env.useMock) {
       setIsOAuthLoading(false);
-      Alert.alert('Mock Mode', 'Google OAuth bypassed in mock mode.', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)') },
+      showAlert('Mock Mode', 'Google OAuth bypassed in mock mode.', [
+        { text: 'OK', onPress: () => router.replace('/') },
       ]);
       return;
     }
@@ -189,7 +189,7 @@ export default function RegisterScreen() {
         }
 
         // Session established via exchangeCodeForSession → onAuthStateChange(SIGNED_IN) fires
-        router.replace('/(tabs)');
+        router.replace('/');
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -221,7 +221,7 @@ export default function RegisterScreen() {
         <SwissPressable
           accessibilityLabel="Back to app"
           className="mt-12"
-          onPress={() => router.replace('/(tabs)')}
+          onPress={() => router.replace('/')}
         >
           <Text variant="body" className="text-ink underline">
             Back to app

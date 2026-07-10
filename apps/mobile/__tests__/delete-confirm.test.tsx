@@ -218,7 +218,7 @@ describe('DeleteConfirmScreen — execution', () => {
     });
 
     expect(mockSignOut).toHaveBeenCalledTimes(1);
-    expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)');
+    expect(mockRouterReplace).toHaveBeenCalledWith('/');
     expect(() => findByTestId(renderer, 'delete-confirm-error')).toThrow();
   });
 
@@ -271,6 +271,6 @@ describe('DeleteConfirmScreen — execution', () => {
     expect(global.fetch).not.toHaveBeenCalled();
     expect(mockGetSession).not.toHaveBeenCalled();
     expect(mockSignOut).toHaveBeenCalledTimes(1);
-    expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)');
+    expect(mockRouterReplace).toHaveBeenCalledWith('/');
   });
 });

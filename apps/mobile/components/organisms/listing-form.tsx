@@ -1,11 +1,12 @@
 import React from 'react';
-import { Alert, Image } from 'react-native';
+import { Image } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { FormInput } from '@/components/atoms';
 import { Box, Stack, SwissPressable, Text } from '@/components/primitives';
+import { showAlert } from '@/lib/dialog';
 import {
   LISTING_CONDITION_VALUES,
   LISTING_TITLE_MAX_LENGTH,
@@ -76,9 +77,9 @@ export function ListingForm({
 
     try {
       await Clipboard.setStringAsync(lines.join('\n'));
-      Alert.alert('Copied', 'Listing details copied to clipboard.');
+      showAlert('Copied', 'Listing details copied to clipboard.');
     } catch {
-      Alert.alert('Copy failed', 'Unable to copy to clipboard. Please try again.');
+      showAlert('Copy failed', 'Unable to copy to clipboard. Please try again.');
     }
 
     onSubmit?.(values);

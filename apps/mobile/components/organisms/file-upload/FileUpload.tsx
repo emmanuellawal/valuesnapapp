@@ -87,6 +87,7 @@ export function FileUpload({
   const [uploadedPhoto, setUploadedPhoto] = useState<CapturedPhoto | null>(null);
   const uploadZoneRef = useRef<View>(null);
   const objectUrlRef = useRef<string | null>(null);
+  const handedOffRef = useRef(false);
 
   // Notify parent of state changes
   useEffect(() => {
@@ -96,7 +97,7 @@ export function FileUpload({
   // Cleanup object URL on unmount to prevent memory leaks (Story 1.2 validation note)
   useEffect(() => {
     return () => {
-      if (objectUrlRef.current && Platform.OS === 'web') {
+      if (objectUrlRef.current && Platform.OS === 'web' && !handedOffRef.current) {
         URL.revokeObjectURL(objectUrlRef.current);
       }
     };
@@ -133,6 +134,24 @@ export function FileUpload({
       
       if (result.assets && result.assets[0]) {
         const asset = result.assets[0];
+
+        if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+          setUploadError({
+            type: 'file_too_large',
+            message: `Image must be under ${MAX_FILE_SIZE_MB}MB`,
+          });
+          updateState('error');
+          return;
+        }
+
+        if (asset.mimeType && !ACCEPTED_TYPES.includes(asset.mimeType)) {
+          setUploadError({
+            type: 'invalid_format',
+            message: 'Please upload JPG, PNG, or WEBP image',
+          });
+          updateState('error');
+          return;
+        }
         
         updateState('uploading');
         
@@ -160,6 +179,7 @@ export function FileUpload({
         
         setUploadedPhoto(photo);
         updateState('uploaded');
+        handedOffRef.current = true;
         onPhotoCapture(photo);
       }
     } catch (error) {
@@ -225,8 +245,12 @@ export function FileUpload({
       updateState('uploading');
       
       // Create blob URL for the file
+      if (objectUrlRef.current && Platform.OS === 'web') {
+        URL.revokeObjectURL(objectUrlRef.current);
+      }
       const uri = URL.createObjectURL(imageFile);
-      objectUrlRef.current = uri; // Store for cleanup
+      objectUrlRef.current = uri;
+      handedOffRef.current = false;
       
       // Get image dimensions
       let dimensions;
@@ -252,6 +276,7 @@ export function FileUpload({
       
       setUploadedPhoto(photo);
       updateState('uploaded');
+      handedOffRef.current = true;
       onPhotoCapture(photo);
     } catch (error) {
       console.error('File processing error:', error);

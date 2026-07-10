@@ -30,6 +30,7 @@ function makeItem(id: string): HistoryGridItem {
       conditionDetails: 'Minor wear',
       estimatedAge: '1970s',
       categoryHint: 'Cameras',
+      description: '',
       searchKeywords: ['Canon AE-1'],
       identifiers: { upc: null, modelNumber: null, serialNumber: null },
     },
@@ -76,7 +77,7 @@ describe('HistoryGrid layout props', () => {
     );
     expect(itemWrappers.length).toBeGreaterThan(0);
 
-    const expectedWidth = `calc(${100 / 3}% - ${(24 * (3 - 1)) / 3}px)`;
+    const expectedWidth = `${100 / 3}%`;
     expect(itemWrappers[0].props.style.width).toBe(expectedWidth);
   });
 
@@ -103,7 +104,7 @@ describe('HistoryGridSkeleton layout props', () => {
     );
     expect(itemWrappers.length).toBeGreaterThan(0);
 
-    const expectedWidth = `calc(${100 / 4}% - ${(32 * (4 - 1)) / 4}px)`;
+    const expectedWidth = `${100 / 4}%`;
     expect(itemWrappers[0].props.style.width).toBe(expectedWidth);
   });
 });

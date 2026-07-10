@@ -15,6 +15,7 @@ import type { User as AppUser } from '@/types/user';
 interface AuthContextValue {
   session: Session | null;
   user: AppUser | null;
+  accessToken: string | null;
   isGuest: boolean;
   isLoading: boolean;
   signOut: () => Promise<void>;
@@ -85,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextValue = {
     session,
     user,
+    accessToken: session?.access_token ?? null,
     isGuest: !isLoading && session === null,
     isLoading,
     signOut,

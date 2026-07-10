@@ -10,7 +10,7 @@ from backend.models import AnalyzeRequest, MigrateGuestRequest, ValuationRecord
 from backend.rate_limit import RateLimitRule, enforce_user_rate_limit
 from backend.services.ai import identify_item_from_image, AIIdentificationError
 from backend.services.confidence import calculate_market_confidence
-from backend.services.ebay import search_sold_listings, get_api_stats, reset_api_stats
+from backend.services.ebay import get_market_data_for_item, get_api_stats, reset_api_stats
 from backend.services.idempotency import AppraiseIdempotencyRepository, IdempotencyUnavailableError
 from backend.services.valuations import ValuationRepository
 
@@ -27,14 +27,58 @@ APPRAISE_RATE_LIMIT_AUTH = RateLimitRule.parse("100/hour")
 app = FastAPI(title="ValueSnap Engine")
 
 # CORS - Allow your Expo App to talk to this API
+_DEFAULT_DEV_ORIGINS = [
+    "http://localhost:8083",
+    "http://localhost:19006",
+    "http://127.0.0.1:8083",
+    "http://127.0.0.1:19006",
+]
+
+_cors_origins = allowed_origins if allowed_origins else _DEFAULT_DEV_ORIGINS
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins or ["*"],  # Allow all for dev, tighten for prod
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["Retry-After"],
 )
+
+
+def _require_admin_token(request: Request) -> None:
+    """Guard admin endpoints with a shared secret token."""
+    configured = settings.admin_api_token or settings.secret_key
+    if not configured:
+        raise HTTPException(status_code=503, detail="Admin API is not configured")
+
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header.split(" ", 1)[1].strip() if auth_header.startswith("Bearer ") else ""
+    if token != configured:
+        raise HTTPException(status_code=401, detail="Invalid admin token")
+
+
+def _complete_idempotency_response(
+    idempotency_repo: AppraiseIdempotencyRepository | None,
+    *,
+    principal_type: str,
+    principal_id: str,
+    idempotency_key: str | None,
+    status_code: int,
+    response_body: dict,
+    valuation_id: str | None = None,
+) -> None:
+    if not idempotency_key or not idempotency_repo:
+        return
+
+    idempotency_repo.complete_request(
+        principal_type=principal_type,
+        principal_id=principal_id,
+        idempotency_key=idempotency_key,
+        status_code=status_code,
+        response_body=response_body,
+        valuation_id=valuation_id,
+    )
 
 
 def _get_authenticated_user_context(request: Request, action: str):
@@ -125,7 +169,7 @@ def read_root():
         "status": "operational",
         "mode": "swiss_minimalist",
         "sandbox": settings.ebay_use_sandbox,
-        "cors": allowed_origins or ["*"],
+        "cors": _cors_origins,
     }
 
 
@@ -197,44 +241,48 @@ async def appraise_item(http_request: Request, request: AnalyzeRequest):
     except AIIdentificationError as e:
         # Return structured error response for frontend handling (Story 2-8)
         logger.error(f"AI identification failed: {e.code} - {e.message}")
-        return JSONResponse(
-            status_code=422,
-            content={
-                "success": False,
-                "error": {
-                    "code": e.code,
-                    "message": e.message,
-                    "suggestions": e.suggestions,
-                },
+        error_payload = {
+            "success": False,
+            "error": {
+                "code": e.code,
+                "message": e.message,
+                "suggestions": e.suggestions,
             },
+        }
+        _complete_idempotency_response(
+            idempotency_repo,
+            principal_type=principal_type,
+            principal_id=principal_id,
+            idempotency_key=idempotency_key,
+            status_code=422,
+            response_body=error_payload,
         )
+        return JSONResponse(status_code=422, content=error_payload)
     except Exception as e:
         logger.error(f"Unexpected AI identification error: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "error": {
-                    "code": "GENERIC_ERROR",
-                    "message": "Something went wrong during image analysis",
-                    "suggestions": [
-                        "Please try again",
-                        "If the issue persists, contact support",
-                    ],
-                },
+        error_payload = {
+            "success": False,
+            "error": {
+                "code": "GENERIC_ERROR",
+                "message": "Something went wrong during image analysis",
+                "suggestions": [
+                    "Please try again",
+                    "If the issue persists, contact support",
+                ],
             },
+        }
+        _complete_idempotency_response(
+            idempotency_repo,
+            principal_type=principal_type,
+            principal_id=principal_id,
+            idempotency_key=idempotency_key,
+            status_code=500,
+            response_body=error_payload,
         )
+        return JSONResponse(status_code=500, content=error_payload)
     
-    # Step 2: Market Valuation (eBay)
-    # Construct search query from AI's optimized keywords
-    if identity.search_keywords:
-        search_query = " ".join(identity.search_keywords[:3])  # Top 3 keywords
-    else:
-        # Fallback: construct from brand + model
-        search_query = f"{identity.brand} {identity.model}".strip()
-    
-    # Pass item_type for fallback search optimization (Story 2-5, Task 6.2)
-    market_data = await search_sold_listings(search_query, item_type=identity.item_type)
+    # Step 2: Market Valuation (eBay) via cache wrapper
+    market_data = await get_market_data_for_item(identity.model_dump())
     
     # Step 3: Calculate Market Confidence (Story 2-5)
     confidence_result = calculate_market_confidence(
@@ -310,7 +358,7 @@ QUOTA_WARNING_THRESHOLD = 0.80  # 80% = 4000 calls
 
 
 @app.get("/admin/api-stats")
-def get_api_statistics():
+def get_api_statistics(request: Request):
     """
     Get API usage statistics for monitoring (Story 2-4, Task 8).
     
@@ -321,6 +369,8 @@ def get_api_statistics():
     
     Warning: Logs a warning if quota usage exceeds 80%.
     """
+    _require_admin_token(request)
+
     # Get eBay API stats
     api_stats = get_api_stats()
     
@@ -357,13 +407,14 @@ def get_api_statistics():
 
 
 @app.post("/admin/api-stats/reset")
-def reset_api_statistics():
+def reset_api_statistics(request: Request):
     """
     Reset API call counters (for testing purposes only).
     
     Warning: Only use in development/testing. Production should track
     cumulative usage for accurate quota monitoring.
     """
+    _require_admin_token(request)
     reset_api_stats()
     logger.info("API statistics reset by admin endpoint")
     return {"status": "reset", "message": "API call counters have been reset"}
@@ -437,5 +488,24 @@ async def get_valuations(request: Request):
     except Exception as e:
         logger.error(f"Failed to fetch valuations for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch valuations") from e
+
+
+@app.get("/api/valuations/{valuation_id}")
+async def get_valuation(valuation_id: str, request: Request):
+    """Return a single authenticated user's valuation by ID."""
+    _, user_id, token = _get_authenticated_user_context(request, "get-valuation")
+    enforce_user_rate_limit(user_id, "get-valuations", GET_VALUATIONS_RATE_LIMIT)
+
+    try:
+        repo = ValuationRepository(supabase_client=get_user_supabase(token))
+        record = repo.get_by_id(valuation_id, user_id=user_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Valuation not found")
+        return {"valuation": _serialize_valuation_record(record)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to fetch valuation {valuation_id} for user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch valuation") from e
 
 

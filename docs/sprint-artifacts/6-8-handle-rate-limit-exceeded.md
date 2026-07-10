@@ -1,6 +1,6 @@
 # Story 6.8: Handle Rate Limit Exceeded
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -49,6 +49,12 @@ so that I understand why appraisal isn't working and know how long to wait befor
     - `'shows upgrade CTA for guest users'` — mock isGuest=true, RATE_LIMIT error with `retryAfterSeconds: 1800`; verify "Create a free account" link is rendered; verify "Try again in 30 minutes" shown
     - `'shows fallback time when Retry-After uses default'` — mock RATE_LIMIT error with `retryAfterSeconds: 60` (default); verify "Try again in 1 minute" renders
     - `'dismiss button clears error state'` — mock RATE_LIMIT error; verify dismiss button present; tap it; verify error state is cleared and camera/upload UI returns
+
+### Review Follow-ups (AI)
+
+- [ ] [AI-Review][High] Move appraise rate-limit enforcement to run after idempotency replay/in-progress handling so retries using the same idempotency key do not consume quota or return 429 before replay is served. Add a backend regression test for repeated requests with the same `Idempotency-Key`.
+- [ ] [AI-Review][High] Thread the authenticated Supabase access token into `appraise()` requests and send `Authorization: Bearer <token>` for signed-in users. Without it, `_resolve_appraise_principal()` always falls back to `guest_session_id`, so the authenticated `100/hour` tier is unreachable.
+- [ ] [AI-Review][Medium] Add backend coverage for `/api/appraise` rate limiting, including `Retry-After` header behavior and auth-vs-guest tier selection. Current backend rate-limit tests only cover delete-account, migrate-guest, and get-valuations.
 
 ### Summary
 
@@ -169,8 +175,35 @@ GPT-5.3-Codex
 - `apps/mobile/__tests__/api.test.ts`
 - `apps/mobile/__tests__/camera-rate-limit.story-6-8.test.tsx`
 - `apps/mobile/__tests__/error-state.test.tsx`
+- `docs/sprint-artifacts/6-8-handle-rate-limit-exceeded.md`
+- `docs/sprint-artifacts/sprint-status.yaml`
 
 ### Change Log
 
 - Added Story 6.8 implementation for backend 429 enforcement + frontend/user-facing rate-limit UX.
 - Added new tests and passed full mobile regression suite.
+
+## Senior Developer Review (AI)
+
+### Review Date
+
+2026-06-03
+
+### Outcome
+
+Changes Requested
+
+### Findings
+
+1. [High] `enforce_user_rate_limit()` runs before idempotency replay/in-progress handling in `appraise_item()`. That means a repeated request with the same `Idempotency-Key` still increments the bucket before the replay path executes, so a legitimate retry can be rate-limited instead of receiving the cached response.
+2. [High] The frontend appraise client never sends an auth token, so the new authenticated `100/hour` tier is dead code. `camera.tsx` only reads `isGuest`, and `appraise()` posts `guest_session_id` plus `Idempotency-Key` but no `Authorization` header, so `_resolve_appraise_principal()` always falls back to guest scope.
+3. [Medium] The backend half of this story is not regression-tested. `backend/tests/test_rate_limits.py` covers delete-account, migrate-guest, and get-valuations only; there is no `/api/appraise` rate-limit test for guest/auth tier selection, `Retry-After`, or the new idempotency interaction.
+
+### Recommended Actions
+
+- Complete the Review Follow-ups (AI) items above.
+- Re-run backend tests in an environment with `fastapi`, `pydantic`, `supabase`, and `httpx` installed.
+
+### Review Entry
+
+- 2026-06-03: Review completed with 2 High and 1 Medium findings. Story returned to `in-progress` pending follow-up fixes.

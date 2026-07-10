@@ -1,5 +1,6 @@
 import React from 'react';
-import { Alert } from 'react-native';
+jest.mock('@/lib/dialog', () => ({ showAlert: jest.fn() }));
+import { showAlert } from '@/lib/dialog';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 
 jest.mock('expo-router', () => ({
@@ -155,7 +156,6 @@ describe('ForgotPasswordScreen', () => {
   });
 
   it('uses mock-mode bypass', async () => {
-    jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     (env as { useMock: boolean }).useMock = true;
 
     let renderer: ReactTestRenderer;
@@ -169,7 +169,7 @@ describe('ForgotPasswordScreen', () => {
       findByTestId(renderer!, 'forgot-password-submit-button').props.onPress();
     });
 
-    expect(Alert.alert).toHaveBeenCalled();
+    expect(showAlert).toHaveBeenCalled();
     expect(mockResetPasswordForEmail).not.toHaveBeenCalled();
     expect(mockRouterReplace).not.toHaveBeenCalled();
   });

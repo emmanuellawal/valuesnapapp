@@ -1,5 +1,6 @@
 import React from 'react';
-import { Alert } from 'react-native';
+jest.mock('@/lib/dialog', () => ({ showAlert: jest.fn() }));
+import { showAlert } from '@/lib/dialog';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 
 jest.mock('expo-router', () => ({
@@ -96,7 +97,7 @@ describe('UpdatePasswordScreen', () => {
     await act(async () => {});
 
     expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'password123' });
-    expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)');
+    expect(mockRouterReplace).toHaveBeenCalledWith('/');
   });
 
   it('shows update error when Supabase rejects the password', async () => {
@@ -126,7 +127,6 @@ describe('UpdatePasswordScreen', () => {
   });
 
   it('uses mock-mode bypass', async () => {
-    jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     (env as { useMock: boolean }).useMock = true;
 
     let renderer: ReactTestRenderer;
@@ -143,7 +143,7 @@ describe('UpdatePasswordScreen', () => {
       findByTestId(renderer!, 'update-password-submit-button').props.onPress();
     });
 
-    expect(Alert.alert).toHaveBeenCalled();
+    expect(showAlert).toHaveBeenCalled();
     expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 });

@@ -7,6 +7,7 @@ import {
   ViewStyle,
   NativeSyntheticEvent,
   TargetedEvent,
+  Platform,
 } from 'react-native';
 
 /**
@@ -24,48 +25,22 @@ export interface SwissPressableProps extends Omit<PressableProps, 'accessibility
 
 /**
  * Swiss-compliant opacity values for interaction states.
- * - Normal: 1.0 (full opacity)
- * - Hover: No change (Swiss is minimalist - hover implicit through cursor)
- * - Pressed: 0.6 (temporary feedback)
- * - Disabled: 0.4 (permanent visual indicator)
  */
 const OPACITY_PRESSED = 0.6;
 const OPACITY_DISABLED = 0.4;
 
-/**
- * Focus indicator style (2px solid black border).
- * Uses border instead of outline for React Native Web compatibility.
- */
-const FOCUS_STYLE: ViewStyle = {
+const FOCUS_STYLE_WEB: ViewStyle = {
+  outlineStyle: 'solid',
+  outlineWidth: 2,
+  outlineColor: '#000000',
+  outlineOffset: 2,
+};
+
+const FOCUS_STYLE_NATIVE: ViewStyle = {
   borderWidth: 2,
   borderColor: '#000000',
 };
 
-/**
- * SwissPressable - Accessible button/pressable with Swiss interaction states.
- *
- * Implements Swiss Minimalist design patterns for interaction feedback:
- * - No hover effect (minimalist - cursor change is implicit)
- * - Pressed: opacity 0.6 (temporary feedback)
- * - Disabled: opacity 0.4 (permanent visual indicator)
- * - Focus: 2px solid black border (accessible, visible, no glow)
- *
- * NEVER uses outlines (not supported consistently in React Native Web).
- *
- * @example
- * ```tsx
- * <SwissPressable
- *   onPress={() => console.log('pressed')}
- *   accessibilityLabel="Submit valuation"
- *   disabled={false}
- * >
- *   <Text variant="body">Submit</Text>
- * </SwissPressable>
- * ```
- *
- * @see Story 0.3: Create Primitive Components
- * @see docs/SWISS-MINIMALIST.md - Interaction Patterns
- */
 export function SwissPressable({
   accessibilityLabel,
   disabled = false,
@@ -74,19 +49,17 @@ export function SwissPressable({
   style,
   onFocus,
   onBlur,
+  accessibilityState,
   ...props
 }: SwissPressableProps) {
   const [isFocused, setIsFocused] = useState(false);
-
-  // Note: accessibilityLabel is enforced by TypeScript as required prop.
-  // Runtime check removed as it's redundant - TypeScript prevents compilation without it.
 
   const handleFocus = useCallback(
     (e: NativeSyntheticEvent<TargetedEvent>) => {
       setIsFocused(true);
       onFocus?.(e);
     },
-    [onFocus]
+    [onFocus],
   );
 
   const handleBlur = useCallback(
@@ -94,8 +67,13 @@ export function SwissPressable({
       setIsFocused(false);
       onBlur?.(e);
     },
-    [onBlur]
+    [onBlur],
   );
+
+  const mergedAccessibilityState = {
+    ...accessibilityState,
+    disabled,
+  };
 
   return (
     <Pressable
@@ -103,16 +81,14 @@ export function SwissPressable({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled }}
+      accessibilityState={mergedAccessibilityState}
       onFocus={handleFocus}
       onBlur={handleBlur}
       style={(state: PressableStateCallbackType) => {
         const { pressed } = state;
-        // Base styles from style prop
         const baseStyles: StyleProp<ViewStyle> =
           typeof style === 'function' ? style(state) : style;
 
-        // Calculate opacity based on state
         let opacity = 1;
         if (disabled) {
           opacity = OPACITY_DISABLED;
@@ -120,12 +96,11 @@ export function SwissPressable({
           opacity = OPACITY_PRESSED;
         }
 
-        // Combine all styles — scale(0.98) tactile feedback on press
         return [
           baseStyles,
           { opacity },
           pressed && !disabled && { transform: [{ scale: 0.98 }] },
-          isFocused && FOCUS_STYLE,
+          isFocused && (Platform.OS === 'web' ? FOCUS_STYLE_WEB : FOCUS_STYLE_NATIVE),
         ];
       }}
       {...props}
@@ -136,4 +111,3 @@ export function SwissPressable({
 }
 
 export default SwissPressable;
-

@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   TextInput,
@@ -15,6 +14,7 @@ import { z } from 'zod';
 
 import { Box, Stack, Text, SwissPressable, ScreenContainer } from '@/components/primitives';
 import { FormInput } from '@/components/atoms';
+import { showAlert } from '@/lib/dialog';
 import { supabase } from '@/lib/supabase';
 import { env } from '@/lib/env';
 
@@ -89,8 +89,8 @@ export default function SignInScreen() {
     // Mock mode bypass
     if (env.useMock) {
       setSubmitState('idle');
-      Alert.alert('Mock Mode', 'Sign in bypassed in mock mode.', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)') },
+      showAlert('Mock Mode', 'Sign in bypassed in mock mode.', [
+        { text: 'OK', onPress: () => router.replace('/') },
       ]);
       return;
     }
@@ -108,7 +108,7 @@ export default function SignInScreen() {
       }
 
       // Session activates → onAuthStateChange(SIGNED_IN) fires → AuthContext updates automatically
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setServerError(mapSignInError(message));
@@ -124,8 +124,8 @@ export default function SignInScreen() {
     // Mock mode bypass
     if (env.useMock) {
       setIsOAuthLoading(false);
-      Alert.alert('Mock Mode', 'Google OAuth bypassed in mock mode.', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)') },
+      showAlert('Mock Mode', 'Google OAuth bypassed in mock mode.', [
+        { text: 'OK', onPress: () => router.replace('/') },
       ]);
       return;
     }
@@ -166,7 +166,7 @@ export default function SignInScreen() {
         }
 
         // Session established via exchangeCodeForSession → onAuthStateChange(SIGNED_IN) fires
-        router.replace('/(tabs)');
+        router.replace('/');
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';

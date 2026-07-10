@@ -3,6 +3,9 @@ import { act, create, ReactTestRenderer } from 'react-test-renderer';
 
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
+  useFocusEffect: (callback: () => void | (() => void)) => {
+    callback();
+  },
 }));
 
 jest.mock('@/contexts/AuthContext', () => ({

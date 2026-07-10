@@ -7,7 +7,8 @@
  */
 
 import React from 'react';
-import { Alert } from 'react-native';
+jest.mock('@/lib/dialog', () => ({ showAlert: jest.fn() }));
+import { showAlert } from '@/lib/dialog';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 
 // ─── Hoisted mocks ────────────────────────────────────────────────────────────
@@ -153,7 +154,6 @@ describe('RegisterScreen', () => {
   });
 
   it('bypasses Supabase and calls Alert in mock mode', async () => {
-    jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     (env as { useMock: boolean }).useMock = true;
 
     let renderer: ReactTestRenderer;
@@ -172,7 +172,7 @@ describe('RegisterScreen', () => {
     await act(async () => {});
 
     expect(mockSignUp).not.toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalled();
+    expect(showAlert).toHaveBeenCalled();
   });
 
   // ── H1: happy-path — session active ─────────────────────────────────────────
@@ -202,7 +202,7 @@ describe('RegisterScreen', () => {
       email: 'test@example.com',
       password: 'password123',
     });
-    expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)');
+    expect(mockRouterReplace).toHaveBeenCalledWith('/');
   });
 
   // ── H2a: server error — duplicate email ──────────────────────────────────────

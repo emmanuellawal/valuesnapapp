@@ -23,6 +23,10 @@ function getHarnessWindow(): HarnessWindow | null {
     return null;
   }
 
+  if (typeof window.location === 'undefined') {
+    return null;
+  }
+
   if (!__DEV__ && window.location.hostname !== 'localhost') {
     return null;
   }

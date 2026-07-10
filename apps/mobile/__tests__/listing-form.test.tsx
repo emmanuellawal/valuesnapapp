@@ -1,7 +1,12 @@
 import React from 'react';
-import { Alert } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
+
+jest.mock('@/lib/dialog', () => ({
+  showAlert: jest.fn(),
+}));
+
+import { showAlert } from '@/lib/dialog';
 
 import { ListingForm } from '@/components/organisms/listing-form';
 import { getTextContent } from '@/test-utils/get-text-content';
@@ -1114,7 +1119,7 @@ describe('ListingForm', () => {
 
   it('copies formatted listing details to the clipboard and shows a success alert', async () => {
     const setStringSpy = jest.spyOn(Clipboard, 'setStringAsync').mockResolvedValueOnce(undefined);
-    const alertSpy = jest.spyOn(Alert, 'alert');
+    const alertSpy = showAlert as jest.Mock;
     const handleSubmit = jest.fn<void, [ListingFormValues]>();
     let renderer: ReactTestRenderer;
 
@@ -1219,7 +1224,7 @@ describe('ListingForm', () => {
 
   it('shows an error alert when clipboard write fails', async () => {
     jest.spyOn(Clipboard, 'setStringAsync').mockRejectedValueOnce(new Error('permission denied'));
-    const alertSpy = jest.spyOn(Alert, 'alert');
+    const alertSpy = showAlert as jest.Mock;
     const handleSubmit = jest.fn<void, [ListingFormValues]>();
     let renderer: ReactTestRenderer;
 

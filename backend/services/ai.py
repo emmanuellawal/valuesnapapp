@@ -27,8 +27,11 @@ RETRY_EXCEPTIONS = (RateLimitError, APITimeoutError, APIConnectionError)
 def _get_client():
     from openai import AsyncOpenAI
 
+    if not settings.openai_api_key:
+        raise ValueError("OPENAI_API_KEY is not configured")
+
     return AsyncOpenAI(
-        api_key=os.environ.get("OPENAI_API_KEY"),
+        api_key=settings.openai_api_key,
         timeout=30.0,  # 30 second timeout per request
     )
 
@@ -116,7 +119,7 @@ async def _call_openai_api(client, base64_image: str) -> ItemIdentity:
         Exception: If all retries fail
     """
     response = await client.beta.chat.completions.parse(
-        model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+        model=settings.openai_model,
         messages=[
             {
                 "role": "user",

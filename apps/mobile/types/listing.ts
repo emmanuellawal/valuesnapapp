@@ -29,7 +29,7 @@ export const listingFormSchema = z.object({
     .refine((value) => !Number.isNaN(Number(value)) && Number(value) > 0, {
       message: 'Price must be a positive number',
     }),
-  description: z.string().optional().default(''),
+  description: z.string(),
 });
 
 export type ListingFormValues = z.infer<typeof listingFormSchema>;

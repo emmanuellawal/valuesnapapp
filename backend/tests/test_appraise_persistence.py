@@ -85,7 +85,7 @@ class TestAppraisePersistence:
 
     @patch("backend.main.ValuationRepository")
     @patch("backend.main.calculate_market_confidence")
-    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.get_market_data_for_item")
     @patch("backend.main.identify_item_from_image")
     def test_successful_appraisal_returns_valuation_id(
         self, mock_ai, mock_ebay, mock_confidence, mock_repo_cls, client
@@ -107,7 +107,7 @@ class TestAppraisePersistence:
 
     @patch("backend.main.ValuationRepository")
     @patch("backend.main.calculate_market_confidence")
-    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.get_market_data_for_item")
     @patch("backend.main.identify_item_from_image")
     def test_save_failure_returns_null_valuation_id(
         self, mock_ai, mock_ebay, mock_confidence, mock_repo_cls, client
@@ -129,7 +129,7 @@ class TestAppraisePersistence:
 
     @patch("backend.main.ValuationRepository")
     @patch("backend.main.calculate_market_confidence")
-    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.get_market_data_for_item")
     @patch("backend.main.identify_item_from_image")
     def test_guest_session_id_forwarded_to_record(
         self, mock_ai, mock_ebay, mock_confidence, mock_repo_cls, client
@@ -155,7 +155,7 @@ class TestAppraisePersistence:
 
     @patch("backend.main.ValuationRepository")
     @patch("backend.main.calculate_market_confidence")
-    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.get_market_data_for_item")
     @patch("backend.main.identify_item_from_image")
     def test_omitted_guest_session_id_defaults_to_none(
         self, mock_ai, mock_ebay, mock_confidence, mock_repo_cls, client
@@ -175,7 +175,7 @@ class TestAppraisePersistence:
     @patch("backend.main.AppraiseIdempotencyRepository")
     @patch("backend.main.ValuationRepository")
     @patch("backend.main.calculate_market_confidence")
-    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.get_market_data_for_item")
     @patch("backend.main.identify_item_from_image")
     def test_idempotency_replay_skips_duplicate_processing(
         self,
@@ -234,7 +234,7 @@ class TestAppraisePersistence:
     @patch("backend.main.AppraiseIdempotencyRepository")
     @patch("backend.main.ValuationRepository")
     @patch("backend.main.calculate_market_confidence")
-    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.get_market_data_for_item")
     @patch("backend.main.identify_item_from_image")
     def test_same_key_without_replay_record_runs_new_request(
         self,
@@ -280,7 +280,7 @@ class TestAppraisePersistence:
     @patch("backend.main.AppraiseIdempotencyRepository")
     @patch("backend.main.ValuationRepository")
     @patch("backend.main.calculate_market_confidence")
-    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.get_market_data_for_item")
     @patch("backend.main.identify_item_from_image")
     def test_idempotency_without_guest_session_uses_anonymous_principal(
         self,
@@ -317,7 +317,7 @@ class TestAppraisePersistence:
     @patch("backend.main.AppraiseIdempotencyRepository")
     @patch("backend.main.ValuationRepository")
     @patch("backend.main.calculate_market_confidence")
-    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.get_market_data_for_item")
     @patch("backend.main.identify_item_from_image")
     def test_idempotency_prefers_authenticated_user_scope(
         self,
@@ -361,7 +361,7 @@ class TestAppraisePersistence:
     @patch("backend.main.AppraiseIdempotencyRepository")
     @patch("backend.main.ValuationRepository")
     @patch("backend.main.calculate_market_confidence")
-    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.get_market_data_for_item")
     @patch("backend.main.identify_item_from_image")
     def test_same_key_in_progress_returns_conflict_without_processing(
         self,
@@ -393,7 +393,7 @@ class TestAppraisePersistence:
     @patch("backend.main.AppraiseIdempotencyRepository")
     @patch("backend.main.ValuationRepository")
     @patch("backend.main.calculate_market_confidence")
-    @patch("backend.main.search_sold_listings")
+    @patch("backend.main.get_market_data_for_item")
     @patch("backend.main.identify_item_from_image")
     def test_idempotency_reservation_failure_returns_503_without_processing(
         self,

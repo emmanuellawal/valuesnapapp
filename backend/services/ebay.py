@@ -84,15 +84,15 @@ async def get_ebay_token() -> str:
         return TOKEN_CACHE["token"]
     
     # Determine environment (sandbox vs production)
-    use_sandbox = os.environ.get("EBAY_USE_SANDBOX", "true").lower() == "true"
+    use_sandbox = settings.ebay_use_sandbox
     
     if use_sandbox:
-        client_id = os.environ.get("EBAY_SANDBOX_APP_ID")
-        client_secret = os.environ.get("EBAY_SANDBOX_CERT_ID")
+        client_id = settings.ebay_sandbox_app_id
+        client_secret = settings.ebay_sandbox_cert_id
         token_url = "https://api.sandbox.ebay.com/identity/v1/oauth2/token"
     else:
-        client_id = os.environ.get("EBAY_PROD_APP_ID")
-        client_secret = os.environ.get("EBAY_PROD_CERT_ID")
+        client_id = settings.ebay_prod_app_id
+        client_secret = settings.ebay_prod_cert_id
         token_url = "https://api.ebay.com/identity/v1/oauth2/token"
     
     if not client_id or not client_secret:
@@ -261,7 +261,7 @@ async def _fetch_ebay_listings(keywords: str) -> Dict[str, Any]:
         }
     
     # Determine environment
-    use_sandbox = os.environ.get("EBAY_USE_SANDBOX", "true").lower() == "true"
+    use_sandbox = settings.ebay_use_sandbox
     base_url = (
         "https://api.sandbox.ebay.com/buy/browse/v1/item_summary/search"
         if use_sandbox else
@@ -486,8 +486,13 @@ async def get_market_data_for_item(item_identity: dict) -> Dict[str, Any]:
     Returns:
         Market data dict with price_range, fair_market_value, data_source, limited_data
     """
-    search_keywords = item_identity.get("search_keywords") or ["unknown"]
-    keywords = search_keywords[0] if search_keywords else "unknown"
+    search_keywords = item_identity.get("search_keywords") or []
+    if search_keywords:
+        keywords = " ".join(search_keywords[:3])
+    else:
+        brand = item_identity.get("brand", "")
+        model = item_identity.get("model", "")
+        keywords = f"{brand} {model}".strip() or "unknown"
     item_type = item_identity.get("item_type")
     
     # Mock mode bypasses cache entirely

@@ -2,6 +2,7 @@ import type { HistoryGridItem } from '@/components/organisms/history-grid';
 import { env } from '@/lib/env';
 import type { ItemDetails, VisualCondition } from '@/types/item';
 import type { ConfidenceLevel, MarketData, MarketDataStatus } from '@/types/market';
+import { ValuationStatus, type Valuation } from '@/types/valuation';
 
 export interface ServerValuation {
   id: string;
@@ -79,6 +80,7 @@ function mapServerValuationToGridItem(valuation: ServerValuation): HistoryGridIt
     estimatedAge: asString(ai.estimated_age) ?? 'unknown',
     categoryHint: asString(ai.category_hint) ?? 'unknown',
     searchKeywords: asStringArray(ai.search_keywords),
+    description: asString(ai.description) ?? '',
     identifiers: {
       upc: asString(identifiers.UPC) ?? null,
       modelNumber: asString(identifiers.model_number) ?? null,
@@ -116,10 +118,6 @@ function mapServerValuationToGridItem(valuation: ServerValuation): HistoryGridIt
   };
 }
 
-export function mapServerValuationsToGridItems(records: ServerValuation[]): HistoryGridItem[] {
-  return records.map(mapServerValuationToGridItem);
-}
-
 export async function fetchServerHistory(token: string): Promise<HistoryGridItem[]> {
   if (!env.apiUrl) {
     throw new Error('API URL is not configured');
@@ -135,6 +133,71 @@ export async function fetchServerHistory(token: string): Promise<HistoryGridItem
 
   const body = (await response.json()) as { valuations: ServerValuation[] };
   return mapServerValuationsToGridItems(body.valuations ?? []);
+}
+
+export function mapServerValuationsToGridItems(records: ServerValuation[]): HistoryGridItem[] {
+  return records.map(mapServerValuationToGridItem);
+}
+
+export function mapServerValuationToValuation(record: ServerValuation): Valuation {
+  const gridItem = mapServerValuationToGridItem(record);
+  const confidenceData = record.confidence_data;
+
+  return {
+    id: record.id,
+    createdAt: record.created_at ?? new Date().toISOString(),
+    status: ValuationStatus.SUCCESS,
+    request: {},
+    response: {
+      itemDetails: gridItem.itemDetails,
+      marketData: gridItem.marketData,
+      valuationId: record.id,
+      confidence: confidenceData
+        ? {
+            marketConfidence: asConfidenceLevel(confidenceData.market_confidence),
+            aiConfidence: asString(confidenceData.ai_confidence) ?? 'MEDIUM',
+            sampleSize:
+              asNumber(asRecord(confidenceData.confidence_factors).sample_size)
+              ?? record.sample_size
+              ?? 0,
+            priceVariance:
+              asNumber(asRecord(confidenceData.confidence_factors).variance_pct) ?? 0,
+            dataSource:
+              asString(asRecord(confidenceData.confidence_factors).data_source) ?? 'primary',
+            dataSourcePenalty: Boolean(
+              asRecord(confidenceData.confidence_factors).data_source_penalty,
+            ),
+            aiOnlyFlag: Boolean(confidenceData.ai_only_flag),
+            message: asString(confidenceData.confidence_message) ?? '',
+          }
+        : undefined,
+    },
+    imageUri: gridItem.imageUri,
+  };
+}
+
+export async function fetchServerValuationById(
+  token: string,
+  valuationId: string,
+): Promise<Valuation | null> {
+  if (!env.apiUrl) {
+    throw new Error('API URL is not configured');
+  }
+
+  const response = await fetch(`${env.apiUrl}/api/valuations/${valuationId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error(`Valuation fetch failed with status ${response.status}`);
+  }
+
+  const body = (await response.json()) as { valuation: ServerValuation };
+  return mapServerValuationToValuation(body.valuation);
 }
 
 export async function migrateGuestData(

@@ -21,6 +21,7 @@
     "test": "jest",
     "test:ci": "jest --ci --runInBand && npm run test:sw-runtime",
     "test:unit": "jest --testPathPattern='__tests__'",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "lint": "expo lint --max-warnings 0",
     "gen:icons": "node scripts/gen-pwa-icons.js"
   },

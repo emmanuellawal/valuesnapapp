@@ -70,4 +70,17 @@ describe('authRecovery helpers', () => {
       error: 'Password recovery link has expired. Please request a new reset link.',
     });
   });
+
+  it('routes back to forgot-password for expired error redirects without type=recovery', async () => {
+    const result = await handleIncomingAuthRedirect(
+      'mobile://auth/update-password#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired',
+    );
+
+    expect(result).toEqual({
+      handled: true,
+      route: '/auth/forgot-password',
+      error: 'Email link is invalid or has expired',
+    });
+    expect(mockSetSession).not.toHaveBeenCalled();
+  });
 });

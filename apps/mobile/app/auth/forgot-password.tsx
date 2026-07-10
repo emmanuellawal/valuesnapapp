@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   View,
@@ -13,6 +12,7 @@ import { z } from 'zod';
 import { FormInput } from '@/components/atoms';
 import { Box, ScreenContainer, Stack, SwissPressable, Text } from '@/components/primitives';
 import { buildPasswordResetRedirectUrl } from '@/lib/authRecovery';
+import { showAlert } from '@/lib/dialog';
 import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
 
@@ -63,7 +63,7 @@ export default function ForgotPasswordScreen() {
     setSubmitState('loading');
 
     if (env.useMock) {
-      Alert.alert('Mock Mode', 'Password reset email bypassed in mock mode.', [
+      showAlert('Mock Mode', 'Password reset email bypassed in mock mode.', [
         { text: 'OK', onPress: () => setSubmitState('sent') },
       ]);
       return;

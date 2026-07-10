@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Alert } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 
 import { Box, Stack as SwissStack, Text, ScreenContainer, SwissPressable } from '@/components/primitives';
@@ -7,6 +6,8 @@ import { ValuationCard, ConfidenceWarning, ProgressIndicator, ValuationCardSkele
 import { createMockItemDetails, createMockMarketData } from '@/types/mocks';
 import type { ConfidenceLevel } from '@/types';
 import { getLocalHistory, deleteFromLocalHistory } from '@/lib/localHistory';
+import { fetchServerValuationById } from '@/lib/migration';
+import { showAlert } from '@/lib/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Valuation } from '@/types/valuation';
 
@@ -28,9 +29,18 @@ function formatDetailTimestamp(iso: string): string {
   }
 }
 
+function parseOptionalNumber(value?: string): number | undefined {
+  if (value === undefined || value === '') {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 export default function AppraisalReportScreen() {
   const router = useRouter();
-  const { isGuest } = useAuth();
+  const { isGuest, accessToken } = useAuth();
   const params = useLocalSearchParams<{
     imageUri?: string;
     brand?: string;
@@ -51,13 +61,45 @@ export default function AppraisalReportScreen() {
 
   useEffect(() => {
     if (!params.id) return;
+
+    let cancelled = false;
     setIsLoadingDetail(true);
-    getLocalHistory().then((history) => {
-      const found = findValuationById(history, params.id!);
-      setDetailValuation(found ?? null);
-      setIsLoadingDetail(false);
-    });
-  }, [params.id]);
+
+    (async () => {
+      const history = await getLocalHistory();
+      const local = findValuationById(history, params.id!);
+      if (cancelled) return;
+
+      if (local) {
+        setDetailValuation(local);
+        setIsLoadingDetail(false);
+        return;
+      }
+
+      if (accessToken) {
+        try {
+          const serverValuation = await fetchServerValuationById(accessToken, params.id!);
+          if (!cancelled) {
+            setDetailValuation(serverValuation);
+          }
+        } catch {
+          if (!cancelled) {
+            setDetailValuation(null);
+          }
+        }
+      } else if (!cancelled) {
+        setDetailValuation(null);
+      }
+
+      if (!cancelled) {
+        setIsLoadingDetail(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [params.id, accessToken]);
 
   // ── Detail view branch ─────────────────────────────────────────────────────
   if (params.id) {
@@ -96,12 +138,12 @@ export default function AppraisalReportScreen() {
       );
     }
 
-    const { response, imageUri, createdAt } = detailValuation;
+    const { response, imageUri, createdAt, id: valuationId } = detailValuation;
     const itemDetails = response?.itemDetails;
     const marketData = response?.marketData;
 
     function handleDelete() {
-      Alert.alert(
+      showAlert(
         'Delete valuation',
         'Remove this valuation from your history?',
         [
@@ -124,14 +166,14 @@ export default function AppraisalReportScreen() {
         return;
       }
 
-      const listingId = detailValuation.id ?? response?.valuationId ?? params.id;
+      const listingId = valuationId ?? response?.valuationId ?? params.id;
 
       if (listingId) {
         router.push(`/listing/${listingId}`);
         return;
       }
 
-      Alert.alert('Unable to list', 'No valuation ID found. Please try re-appraising.');
+      showAlert('Unable to list', 'No valuation ID found. Please try re-appraising.');
     }
 
     return (
@@ -278,30 +320,34 @@ export default function AppraisalReportScreen() {
     );
   }
 
-  // Use params if available, otherwise fall back to mock data
+  const pricesAnalyzed = parseOptionalNumber(params.pricesAnalyzed);
+  const fairMarketValue = parseOptionalNumber(params.fairMarketValue);
+  const priceMin = parseOptionalNumber(params.priceMin);
+  const priceMax = parseOptionalNumber(params.priceMax);
+  const avgDaysToSell = parseOptionalNumber(params.avgDaysToSell);
+  const confidence = (params.confidence as ConfidenceLevel | undefined) ?? 'LOW';
+
   const REPORT_ITEM = createMockItemDetails({
-    itemType: params.itemType || 'vintage camera',
-    brand: params.brand || 'Canon',
-    model: params.model || 'AE-1',
+    itemType: params.itemType ?? 'unknown item',
+    brand: params.brand ?? 'unknown',
+    model: params.model ?? 'unknown',
     visualCondition: 'used_good',
-    categoryHint: 'Cameras',
+    categoryHint: params.itemType ?? 'unknown',
   });
 
   const REPORT_MARKET = createMockMarketData({
-    keywords: `${params.brand || 'Canon'} ${params.model || 'AE-1'}`,
-    totalFound: Number(params.pricesAnalyzed) || 24,
-    pricesAnalyzed: Number(params.pricesAnalyzed) || 24,
-    priceRange: {
-      min: Number(params.priceMin) || 150,
-      max: Number(params.priceMax) || 350,
-    },
-    fairMarketValue: Number(params.fairMarketValue) || 249,
-    mean: Number(params.fairMarketValue) || 262,
-    stdDev: 41,
-    confidence: (params.confidence as ConfidenceLevel) || 'HIGH',
-    avgDaysToSell: params.avgDaysToSell && Number(params.avgDaysToSell) > 0
-      ? Number(params.avgDaysToSell)
-      : undefined,
+    keywords: `${params.brand ?? ''} ${params.model ?? ''}`.trim() || 'item',
+    totalFound: pricesAnalyzed ?? 0,
+    pricesAnalyzed: pricesAnalyzed ?? 0,
+    priceRange:
+      priceMin != null && priceMax != null
+        ? { min: priceMin, max: priceMax }
+        : undefined,
+    fairMarketValue,
+    mean: fairMarketValue,
+    stdDev: 0,
+    confidence,
+    avgDaysToSell: avgDaysToSell && avgDaysToSell > 0 ? avgDaysToSell : undefined,
   });
 
   return (

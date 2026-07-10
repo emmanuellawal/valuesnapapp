@@ -37,16 +37,18 @@ export function parseAuthRedirectParams(url: string): Record<string, string> {
 export async function handleIncomingAuthRedirect(url: string): Promise<AuthRedirectResult> {
   const params = parseAuthRedirectParams(url);
 
-  if (params.type !== 'recovery') {
-    return { handled: false };
-  }
-
-  if (params.error_description) {
+  if (params.error || params.error_description || params.error_code) {
     return {
       handled: true,
       route: '/auth/forgot-password',
-      error: params.error_description,
+      error:
+        params.error_description
+        ?? 'Password recovery link has expired. Please request a new reset link.',
     };
+  }
+
+  if (params.type !== 'recovery') {
+    return { handled: false };
   }
 
   const accessToken = params.access_token;

@@ -157,7 +157,7 @@ development_status:
   6-5-build-marketing-landing-page: review
   6-6-handle-network-errors: done
   6-7-implement-retry-mechanism: done
-  6-8-handle-rate-limit-exceeded: review
+  6-8-handle-rate-limit-exceeded: in-progress
   6-9-implement-mobile-ux-patterns: backlog
   6-10-implement-desktop-ux-patterns: backlog
   6-11-desktop-sidebar-collapse: backlog  # Origin: Epic 3 retro; desktop rail has no collapse/expand toggle under the 10/45/45 workstation model

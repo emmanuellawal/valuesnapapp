@@ -25,7 +25,7 @@ export default function DeleteConfirmScreen() {
     try {
       if (env.useMock) {
         await signOut();
-        router.replace('/(tabs)');
+        router.replace('/');
         return;
       }
 
@@ -54,7 +54,7 @@ export default function DeleteConfirmScreen() {
       }
 
       await signOut();
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch {
       setDeleteError('Account deletion failed. Please try again.');
       setIsDeleting(false);

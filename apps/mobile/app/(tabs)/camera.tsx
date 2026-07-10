@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 import { Box, Stack, Text, SwissPressable, ScreenContainer } from '@/components/primitives';
 import {
@@ -50,6 +50,21 @@ async function readImageAsBase64(uri: string): Promise<string> {
   });
 }
 
+async function stabilizeImageUri(uri: string): Promise<string> {
+  if (Platform.OS !== 'web' || !uri.startsWith('blob:')) {
+    return uri;
+  }
+
+  const response = await fetch(uri);
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 /**
  * Camera Screen — Swiss Minimalist Design
  *
@@ -62,7 +77,7 @@ async function readImageAsBase64(uri: string): Promise<string> {
  */
 export default function CameraScreen() {
   const router = useRouter();
-  const { isGuest } = useAuth();
+  const { isGuest, accessToken } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadKey, setUploadKey] = useState(0);
   const [guestValuationCount, setGuestValuationCount] = useState(0);
@@ -161,6 +176,18 @@ export default function CameraScreen() {
     }
   }, [isOnline]);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (!isGuest) {
+        return;
+      }
+
+      getLocalHistory().then((history) => {
+        setGuestValuationCount(history.length);
+      });
+    }, [isGuest]),
+  );
+
   const handlePhotoCapture = async (photo: CapturedPhoto) => {
     // Store photo for potential retry
     lastPhotoRef.current = photo;
@@ -176,10 +203,11 @@ export default function CameraScreen() {
       const guestSessionId = await getOrCreateGuestSessionId();
       
       // Call the real backend
-      const raw = await appraise(imageBase64, guestSessionId);
+      const raw = await appraise(imageBase64, guestSessionId, { accessToken });
       
       // Transform raw backend response to typed frontend format
       const result = transformValuationResponse(raw as any);
+      const stableImageUri = await stabilizeImageUri(photo.uri);
       
       // Mark progress as complete before hiding
       complete();
@@ -193,7 +221,7 @@ export default function CameraScreen() {
       const resultData = {
         item: result.itemDetails,
         market: result.marketData,
-        imageUri: photo.uri,
+        imageUri: stableImageUri,
       };
       setLastResult(resultData);
       recentResultRef.current = resultData;
@@ -205,7 +233,7 @@ export default function CameraScreen() {
           status: ValuationStatus.SUCCESS,
           request: { imageBase64: undefined },
           response: result,
-          imageUri: photo.uri,
+          imageUri: stableImageUri,
         });
 
         if (isGuest) {

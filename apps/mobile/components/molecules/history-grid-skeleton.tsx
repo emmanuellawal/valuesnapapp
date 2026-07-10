@@ -13,10 +13,7 @@ export interface HistoryGridSkeletonProps {
 }
 
 export function HistoryGridSkeleton({ count = 6, numColumns = 2, gap = 16 }: HistoryGridSkeletonProps) {
-  const columnWidth =
-    numColumns === 1
-      ? ('100%' as const)
-      : (`calc(${100 / numColumns}% - ${(gap * (numColumns - 1)) / numColumns}px)` as any);
+  const columnWidth = numColumns === 1 ? ('100%' as const) : (`${100 / numColumns}%` as const);
 
   return (
     <Box className="flex-row flex-wrap" style={{ gap }}>

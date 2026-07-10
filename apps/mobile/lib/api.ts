@@ -16,6 +16,10 @@ export interface RawAppraiseResponse {
   valuation_id: string | null;
 }
 
+export interface AppraiseOptions {
+  accessToken?: string | null;
+}
+
 /** Error thrown by API client — carries an ErrorType for UI mapping. */
 export class AppraiseError extends Error {
   constructor(
@@ -43,6 +47,9 @@ export interface FetchWithRetryOptions {
 /** HTTP status codes that justify a retry. 4xx and most 5xx do NOT. */
 const RETRYABLE_STATUS = new Set([502, 503, 504]);
 
+/** AI identification can legitimately take up to ~90s (3 OpenAI attempts × 30s). */
+const APPRAISE_TIMEOUT_MS = 120_000;
+
 /** Sleep helper that honours fake timers in tests. */
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -59,15 +66,6 @@ function createIdempotencyKey(): string {
 /**
  * fetch() wrapper with per-attempt timeout, exponential backoff, and narrow
  * retry on transient network/server errors.
- *
- * Retry triggers:
- *   - fetch() throws (DNS, TCP, TLS, AbortError from our timeout)
- *   - response.status ∈ {502, 503, 504}
- *
- * Never retries on 2xx/3xx/4xx. See 5.5-7-network-polish.md Dev Notes for
- * rationale (429 retry would worsen rate-limiting; 400 retry is wasted work).
- *
- * Exported for unit tests; production code should call appraise() instead.
  */
 export async function fetchWithRetry(
   url: string,
@@ -104,8 +102,6 @@ export async function fetchWithRetry(
     }
   }
 
-  // Unreachable: loop always returns or throws before exit.
-  // Exists only to satisfy TypeScript's exhaustive-return check.
   throw new Error('fetchWithRetry: exhausted attempts');
 }
 
@@ -127,33 +123,40 @@ function mapErrorCode(code: string | undefined): ErrorType {
 /**
  * Call /api/appraise with an image and guest session ID.
  *
- * Retries transient failures (network errors, 502/503/504) up to 2 times with
- * exponential backoff. 4xx responses are surfaced immediately.
- *
  * @throws AppraiseError with a mapped ErrorType on failure.
  */
 export async function appraise(
   imageBase64: string,
   guestSessionId: string,
+  options: AppraiseOptions = {},
 ): Promise<RawAppraiseResponse> {
   if (!env.apiUrl) {
     throw new AppraiseError('GENERIC_ERROR', 'API URL is not configured');
   }
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Idempotency-Key': createIdempotencyKey(),
+  };
+
+  if (options.accessToken) {
+    headers.Authorization = `Bearer ${options.accessToken}`;
+  }
+
   let response: Response;
-  const idempotencyKey = createIdempotencyKey();
   try {
-    response = await fetchWithRetry(`${env.apiUrl}/api/appraise`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Idempotency-Key': idempotencyKey,
+    response = await fetchWithRetry(
+      `${env.apiUrl}/api/appraise`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          image_base64: imageBase64,
+          guest_session_id: guestSessionId,
+        }),
       },
-      body: JSON.stringify({
-        image_base64: imageBase64,
-        guest_session_id: guestSessionId,
-      }),
-    });
+      { timeoutMs: APPRAISE_TIMEOUT_MS, retries: 1 },
+    );
   } catch {
     throw new AppraiseError('NETWORK_ERROR', 'Unable to reach the server');
   }

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Alert } from 'react-native';
+jest.mock('@/lib/dialog', () => ({ showAlert: jest.fn() }));
+import { showAlert } from '@/lib/dialog';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 
 // ─── Hoisted mocks ─────────────────────────────────────────────────────────────
@@ -139,7 +140,7 @@ describe('RegisterScreen — Google OAuth', () => {
       googleButton.props.onPress();
     });
 
-    expect(router.replace).toHaveBeenCalledWith('/(tabs)');
+    expect(router.replace).toHaveBeenCalledWith('/');
   });
 
   it('shows error message when signInWithOAuth returns error', async () => {
@@ -199,7 +200,6 @@ describe('RegisterScreen — Google OAuth', () => {
   });
 
   it('bypasses OAuth and shows Alert in mock mode', async () => {
-    jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     (env as { useMock: boolean }).useMock = true;
 
     let renderer: ReactTestRenderer;
@@ -217,7 +217,7 @@ describe('RegisterScreen — Google OAuth', () => {
     });
 
     expect(mockSignInWithOAuth).not.toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalled();
+    expect(showAlert).toHaveBeenCalled();
   });
 
   it('does not navigate or show error when the user cancels or dismisses the browser', async () => {

@@ -26,7 +26,7 @@ export function SwissSidebar({
     <View
       accessibilityRole="tablist"
       className="bg-paper border-r border-divider py-8 px-6"
-      style={{ width: railWidth, flex: 1 }}
+      style={{ width: railWidth, alignSelf: 'stretch' }}
     >
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];

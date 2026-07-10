@@ -111,7 +111,8 @@ describe('SwissSidebar real surface regression', () => {
 
     expect(style.width).toBe(102);
     expect(style.width).not.toBe(240);
-    expect(style.flex).toBe(1);
+    expect(style.alignSelf).toBe('stretch');
+    expect(style.flex).toBeUndefined();
   });
 
   it('marks active tab selected and applies active text class', () => {

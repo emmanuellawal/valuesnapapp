@@ -25,6 +25,7 @@ class Settings(BaseSettings):
 
     # Security
     secret_key: Optional[str] = None
+    admin_api_token: Optional[str] = None
     jwt_secret: Optional[str] = None
     jwt_expiration_hours: Optional[int] = None
 

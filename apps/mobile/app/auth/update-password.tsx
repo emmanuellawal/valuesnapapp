@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   View,
@@ -12,6 +11,7 @@ import { z } from 'zod';
 
 import { FormInput } from '@/components/atoms';
 import { Box, ScreenContainer, Stack, SwissPressable, Text } from '@/components/primitives';
+import { showAlert } from '@/lib/dialog';
 import { env } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
 
@@ -77,8 +77,8 @@ export default function UpdatePasswordScreen() {
     setSubmitState('loading');
 
     if (env.useMock) {
-      Alert.alert('Mock Mode', 'Password update bypassed in mock mode.', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)') },
+      showAlert('Mock Mode', 'Password update bypassed in mock mode.', [
+        { text: 'OK', onPress: () => router.replace('/') },
       ]);
       return;
     }
@@ -91,7 +91,7 @@ export default function UpdatePasswordScreen() {
         return;
       }
 
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setServerError(mapUpdatePasswordError(message));

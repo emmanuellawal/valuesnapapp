@@ -1,5 +1,6 @@
 import React from 'react';
-import { Alert } from 'react-native';
+jest.mock('@/lib/dialog', () => ({ showAlert: jest.fn() }));
+import { showAlert } from '@/lib/dialog';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 
 // ─── Hoisted mocks ────────────────────────────────────────────────────────────
@@ -113,7 +114,6 @@ describe('SignInScreen', () => {
   });
 
   it('bypasses Supabase and shows Alert in mock mode', async () => {
-    jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     (env as { useMock: boolean }).useMock = true;
 
     let renderer: ReactTestRenderer;
@@ -131,7 +131,7 @@ describe('SignInScreen', () => {
     await act(async () => {});
 
     expect(mockSignInWithPassword).not.toHaveBeenCalled();
-    expect(Alert.alert).toHaveBeenCalled();
+    expect(showAlert).toHaveBeenCalled();
   });
 
   it('calls router.replace("/(tabs)") on successful sign-in', async () => {
@@ -158,7 +158,7 @@ describe('SignInScreen', () => {
       email: 'user@example.com',
       password: 'correctpassword',
     });
-    expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)');
+    expect(mockRouterReplace).toHaveBeenCalledWith('/');
   });
 
   it('shows incorrect credentials error when Supabase returns invalid login error', async () => {
