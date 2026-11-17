@@ -143,10 +143,31 @@ function RootLayoutNav() {
         <AuthProvider>
           <TestHarnessBoundary />
           <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            {/*
+              AC #6: disable swipe-back on the camera tab route only. Scoped
+              per-screen (not root screenOptions) so pushed screens elsewhere
+              (appraisal, listing/[id], auth/*, account/*) and modal.tsx's
+              swipe-down dismissal remain untouched — see "Doc conflict —
+              swipe gestures" in docs/sprint-artifacts/6-9-implement-mobile-ux-patterns.md.
+              gestureEnabled is honored by @react-navigation/native-stack on
+              iOS only; no-op on Android (OS-level back gesture) and web.
+            */}
+            <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
             <Stack.Screen name="auth" options={{ headerShown: false }} />
             <Stack.Screen name="account" options={{ headerShown: false }} />
+            {/*
+              Story 6.10 AC #4/#5: headerShown must be set statically here, not
+              only at render-time inside AppraisalReportScreen. A screen's own
+              <Stack.Screen options={{ headerShown: false }} /> is applied too
+              late to prevent the native-stack default header from appearing
+              in the static web export's first paint (a real, measurable
+              layout shift) — see "Verified: the header-flash bug is real" in
+              docs/sprint-artifacts/6-10-implement-desktop-ux-patterns.md.
+              No gestureEnabled here — swipe-back on /appraisal is
+              spec-required and already works via the native-stack default.
+            */}
+            <Stack.Screen name="appraisal" options={{ headerShown: false }} />
           </Stack>
         </AuthProvider>
       </ErrorBoundary>

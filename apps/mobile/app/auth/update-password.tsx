@@ -78,7 +78,7 @@ export default function UpdatePasswordScreen() {
 
     if (env.useMock) {
       showAlert('Mock Mode', 'Password update bypassed in mock mode.', [
-        { text: 'OK', onPress: () => router.replace('/') },
+        { text: 'OK', onPress: () => router.replace('/camera') },
       ]);
       return;
     }
@@ -91,7 +91,7 @@ export default function UpdatePasswordScreen() {
         return;
       }
 
-      router.replace('/');
+      router.replace('/camera');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setServerError(mapUpdatePasswordError(message));

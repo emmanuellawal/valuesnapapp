@@ -26,6 +26,10 @@ class TestConfidenceInApiFlow:
         from backend.models import ItemIdentity
         
         mock_identity = ItemIdentity(
+            visible_observations=(
+                "Black over-ear headphones with padded earcups, a padded headband, "
+                "a USB-C port on the right earcup, and SONY printed on the headband."
+            ),
             item_type="wireless headphones",
             brand="Sony",
             model="WH-1000XM4",

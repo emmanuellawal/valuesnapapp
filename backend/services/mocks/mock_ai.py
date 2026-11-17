@@ -9,6 +9,7 @@ from ...models import Identifiers, ItemIdentity
 
 MOCK_ITEMS: List[ItemIdentity] = [
     ItemIdentity(
+        visible_observations="Round stainless steel wristwatch with a black dial, rotating bezel with minute markings, luminous hour markers, and the word \"ROLEX\" printed on the dial; oyster-style metal bracelet with light hairline scratches.",
         item_type="vintage wristwatch",
         brand="Rolex",
         model="Submariner",
@@ -22,6 +23,7 @@ MOCK_ITEMS: List[ItemIdentity] = [
         ai_identification_confidence="HIGH",
     ),
     ItemIdentity(
+        visible_observations="Black over-ear headphones with padded earcups, a padded adjustable headband, a USB-C port and a power button on the right earcup, and \"SONY\" printed on the headband.",
         item_type="wireless headphones",
         brand="Sony",
         model="WH-1000XM4",
@@ -35,6 +37,7 @@ MOCK_ITEMS: List[ItemIdentity] = [
         ai_identification_confidence="HIGH",
     ),
     ItemIdentity(
+        visible_observations="Hardcover book with a printed dust jacket, worn corners, and light creasing along the spine; title text is too small to read clearly.",
         item_type="hardcover novel",
         brand="unknown",
         model="unknown",
@@ -48,6 +51,7 @@ MOCK_ITEMS: List[ItemIdentity] = [
         ai_identification_confidence="LOW",
     ),
     ItemIdentity(
+        visible_observations="Black mesh office chair with an adjustable armrest on each side, a tilt lever beneath the seat, a five-star base on casters, and a metal badge on the backrest reading \"Herman Miller\".",
         item_type="office chair",
         brand="Herman Miller",
         model="Aeron",
@@ -62,6 +66,7 @@ MOCK_ITEMS: List[ItemIdentity] = [
     ),
     # Edge case: Unknown/ambiguous item (LOW confidence)
     ItemIdentity(
+        visible_observations="Small tabletop ornament with a glossy surface and no legible text, logos, or markings visible.",
         item_type="decorative object",
         brand="unknown",
         model="unknown",

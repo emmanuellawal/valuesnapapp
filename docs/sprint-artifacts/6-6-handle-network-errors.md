@@ -224,3 +224,20 @@ GPT-5.3-Codex (GitHub Copilot)
 - `apps/mobile/app/(tabs)/camera.tsx`
 - `apps/mobile/__tests__/camera-offline-appraise-error.story-6-4.test.tsx`
 - `apps/mobile/__tests__/network-banner.test.tsx`
+
+## Code Review
+
+### Senior Developer Review (AI)
+
+**Reviewer:** Grok 4.7
+**Date:** 2026-11-17
+**Outcome:** Approved. This section was missing when the story was marked done. It records a review of the code already on `main` in `235b7d8`, not a new implementation.
+
+Checked against the acceptance criteria:
+
+- `ErrorState` uses the title "Connection failed" for `NETWORK_ERROR`. The suggestions describe a saved photo and a manual retry. No status code is shown.
+- `NetworkBanner` renders nothing unless the error is `NETWORK_ERROR`. Offline copy is "Offline — request queued". Online copy is "Tap Retry to submit your request".
+- `camera.tsx` keeps the error screen when the device drops offline after the failure (`if (!isOnline && !error)`), and renders `NetworkBanner` under `ErrorState`.
+- `network-banner.test.tsx` covers the empty, offline, online, and connectivity-change cases. `camera-offline-appraise-error.story-6-4.test.tsx` asserts "Connection failed".
+
+The banner text says the request is queued. This story stores the photo in `lastPhotoRef` for a manual retry. Automatic retry is story 6-7. That boundary is correct. No defect found that needs a code change.

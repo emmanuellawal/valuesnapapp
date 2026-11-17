@@ -77,7 +77,7 @@ describe('UpdatePasswordScreen', () => {
     expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 
-  it('updates password and routes to tabs on success', async () => {
+  it('updates password and routes to /camera on success', async () => {
     mockUpdateUser.mockResolvedValue({ data: {}, error: null });
 
     let renderer: ReactTestRenderer;
@@ -97,7 +97,7 @@ describe('UpdatePasswordScreen', () => {
     await act(async () => {});
 
     expect(mockUpdateUser).toHaveBeenCalledWith({ password: 'password123' });
-    expect(mockRouterReplace).toHaveBeenCalledWith('/');
+    expect(mockRouterReplace).toHaveBeenCalledWith('/camera');
   });
 
   it('shows update error when Supabase rejects the password', async () => {

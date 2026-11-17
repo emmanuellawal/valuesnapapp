@@ -22,6 +22,8 @@
 #   - in-progress: Developer actively working on implementation
 #   - review: Ready for code review (via Dev's code-review workflow)
 #   - done: Story completed
+#   - blocked: Cannot start until an external dependency is met. No sprint estimate.
+#     Do not pick blocked stories via *create-story.
 #
 # Retrospective Status:
 #   - optional: Can be completed but not required
@@ -149,24 +151,26 @@ development_status:
   epic-5.5-retrospective: completed
 
   # Epic 6: Platform & PWA (14 stories)
-  epic-6: in-progress
+  epic-6: done  # Retro 2026-11-17: 14/14 stories done. Unpublished and mixed with Epic 8 in the working tree.
   6-1-implement-tab-navigation: done
   6-2-implement-responsive-grid-system: done
   6-3-configure-pwa-manifest: done
   6-4-implement-service-worker-for-offline: done
-  6-5-build-marketing-landing-page: review
+  6-5-build-marketing-landing-page: done  # Code review complete 2026-11-17: fixed 13 auth/account /camera redirects, aligned landing copy with Epic 6 Plan AC3, dark-mode/a11y polish, unit + CI static export checks
   6-6-handle-network-errors: done
   6-7-implement-retry-mechanism: done
-  6-8-handle-rate-limit-exceeded: in-progress
-  6-9-implement-mobile-ux-patterns: backlog
-  6-10-implement-desktop-ux-patterns: backlog
-  6-11-desktop-sidebar-collapse: backlog  # Origin: Epic 3 retro; desktop rail has no collapse/expand toggle under the 10/45/45 workstation model
-  6-12-offline-migration-retry-queue: backlog  # Origin: Epic 4 retro; failed guest migration not retried when back online
+  6-8-handle-rate-limit-exceeded: done
+  6-9-implement-mobile-ux-patterns: done
+  6-10-implement-desktop-ux-patterns: done
+  6-11-desktop-sidebar-collapse: done  # Origin: Epic 3 retro; desktop rail has no collapse/expand toggle under the 10/45/45 workstation model
+  6-12-offline-migration-retry-queue: done  # Origin: Epic 4 retro; code review complete 2026-11-17: closed cross-account/non-retryable/epoch races, URL/constant/shape hardening, 3/3 E2E + 539 unit tests pass
   6-13-appraise-idempotency-key: done  # Origin: Epic 5.5 network retry follow-up; define appraise idempotency contract (Idempotency-Key header or body field) with server-side dedupe so retries/replays cannot create duplicate valuation rows
-  6-14-ai-listing-quality-overhaul: backlog  # Origin: 5.5-10 evaluation; both mini and 4o scored 0/5 on sampled set — implement visual grounding + safer confidence behavior before trusting listing prefill quality
-  epic-6-retrospective: optional
+  6-14-ai-listing-quality-overhaul: done  # Origin: 5.5-10; ONE-PHOTO visual grounding + abstention ONLY. Retrieval ladder, comparable scoring, Gate A, and model bakeoff are Epic 8 — do not absorb them here. Governing: docs/sprint-artifacts/epic-8-evidence-integrity-decision.md
+  epic-6-retrospective: completed  # docs/sprint-artifacts/epic-6-retro-2026-11-17.md
 
   # Epic 7: Accessibility & Polish (12 stories)
+  # Epic 6 retro 2026-11-17: do not create these stories until 8-1 is done.
+  # Accessibility ACs stay valid. They are not the next production change.
   epic-7: backlog
   7-1-implement-color-contrast-compliance: backlog
   7-2-ensure-touch-target-sizes: backlog
@@ -183,4 +187,21 @@ development_status:
   7-13-oauth-edge-cases-cancel-dismiss-expired: backlog  # Origin: Epic 4 Story 4.4-2 dev notes; F4/F5/F6 paths untested
   7-14-fix-swiss-pressable-accessibility-state-merge: backlog  # Origin: Story 5.8 code review; SwissPressable spreads {...props} after its own accessibilityState={{ disabled }}, so any caller-supplied accessibilityState key overwrites disabled instead of merging — affects buttons that are simultaneously disabled and carry a custom accessibilityState (e.g. selected); natural fix home: 7-3-implement-focus-indicators or 7-6-announce-errors-to-screen-readers
   epic-7-retrospective: optional
+
+  # Epic 8: Evidence Integrity (8 scheduled stories + Gate B blocked)
+  # Governing: docs/sprint-artifacts/epic-8-evidence-integrity-decision.md
+  # Locked ACs: docs/sprint-artifacts/epic-8-plan.md
+  # First production change: 8.1. Do not ship 8.2–8.8 ahead of 8.1.
+  # 6-10 is out of scope. 6-14 stays one-photo grounding.
+  epic-8: backlog
+  8-1-evidence-honesty-hotfix: backlog  # FIRST production change: rename search_sold_listings, kill broaden fallback, no SELL_NOW, fix history.tsx collection $ total
+  8-2-structured-browse-retrieval: backlog  # GTIN → EPID → category/aspects → one keyword → abstain; cache key version bump
+  8-3-comparable-preservation: backlog  # Keep Browse itemSummaries; normalize price/qty/condition/listing type/aspects
+  8-4-comparable-scoring: backlog  # Rules-based match score + rejection reasons; stats from accepted comps only
+  8-5-readiness-integration: backlog  # Thread accepted-comp quality into confidence/readiness; "Evidence supports listing preparation"
+  8-6-gate-a-dataset: backlog  # 50 messy photos, 35/15, 500 labels, 10% double-label + kappa; retire TEST_IMAGES.json as quality gate
+  8-7-controlled-bakeoff: backlog  # mini/Luna/Terra × current/grounded prompt on identical retrieval; NO production model change
+  8-8-persistence-contract-cleanup: backlog  # fair_market_value column backfill; response key already has current_asking_estimate
+  8-9-gate-b-sold-evidence: blocked  # External: licensed sold data or genuine post-sale labels. No estimate. Do not *create-story.
+  epic-8-retrospective: optional
 

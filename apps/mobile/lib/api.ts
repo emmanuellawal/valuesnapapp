@@ -115,8 +115,19 @@ function mapErrorCode(code: string | undefined): ErrorType {
     case 'INVALID_IMAGE':
     case 'RATE_LIMIT':
       return code as ErrorType;
+    case 'IDEMPOTENCY_UNAVAILABLE':
+      return 'SERVICE_UNAVAILABLE';
     default:
       return 'GENERIC_ERROR';
+  }
+}
+
+async function parseErrorBody(response: Response): Promise<{ code?: string; message?: string }> {
+  try {
+    const body = await response.json();
+    return body?.error ?? {};
+  } catch {
+    return {};
   }
 }
 
@@ -143,6 +154,11 @@ export async function appraise(
     headers.Authorization = `Bearer ${options.accessToken}`;
   }
 
+  const requestBody = JSON.stringify({
+    image_base64: imageBase64,
+    guest_session_id: guestSessionId,
+  });
+
   let response: Response;
   try {
     response = await fetchWithRetry(
@@ -150,15 +166,39 @@ export async function appraise(
       {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          image_base64: imageBase64,
-          guest_session_id: guestSessionId,
-        }),
+        body: requestBody,
       },
       { timeoutMs: APPRAISE_TIMEOUT_MS, retries: 1 },
     );
   } catch {
     throw new AppraiseError('NETWORK_ERROR', 'Unable to reach the server');
+  }
+
+  let parsedError = response.ok ? {} : await parseErrorBody(response);
+
+  // The backend guarantees this response occurs before AI or eBay processing.
+  // Retry once without the optional key while a schema migration is pending.
+  if (
+    response.status === 503
+    && parsedError.code === 'IDEMPOTENCY_UNAVAILABLE'
+  ) {
+    const fallbackHeaders = { ...headers };
+    delete fallbackHeaders['Idempotency-Key'];
+
+    try {
+      response = await fetchWithRetry(
+        `${env.apiUrl}/api/appraise`,
+        {
+          method: 'POST',
+          headers: fallbackHeaders,
+          body: requestBody,
+        },
+        { timeoutMs: APPRAISE_TIMEOUT_MS, retries: 0 },
+      );
+      parsedError = response.ok ? {} : await parseErrorBody(response);
+    } catch {
+      throw new AppraiseError('NETWORK_ERROR', 'Unable to reach the server');
+    }
   }
 
   if (!response.ok) {
@@ -174,14 +214,9 @@ export async function appraise(
       throw new AppraiseError('RATE_LIMIT', 'Too many requests', retryAfterSeconds);
     }
 
-    try {
-      const body = await response.json();
-      if (body?.error?.code) {
-        errorType = mapErrorCode(body.error.code);
-        message = body.error.message || message;
-      }
-    } catch {
-      // Could not parse error body — use defaults
+    if (parsedError.code) {
+      errorType = mapErrorCode(parsedError.code);
+      message = parsedError.message || message;
     }
 
     throw new AppraiseError(errorType, message);

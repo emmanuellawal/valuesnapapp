@@ -81,14 +81,17 @@ export async function getLocalHistory(): Promise<Valuation[]> {
 /**
  * Save a valuation to local history.
  * Prepends the new item and trims to the newest MAX_HISTORY_ITEMS.
+ * Returns whether the value is durably available for report navigation.
  */
-export async function saveToLocalHistory(valuation: Valuation): Promise<void> {
+export async function saveToLocalHistory(valuation: Valuation): Promise<boolean> {
   try {
     const current = await getLocalHistory();
     const updated = [valuation, ...current].slice(0, MAX_HISTORY_ITEMS);
     await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+    return true;
   } catch {
     // Best-effort — don't crash the app if local storage fails
+    return false;
   }
 }
 

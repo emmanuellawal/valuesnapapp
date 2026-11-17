@@ -76,6 +76,9 @@ Set in the dashboard — **names only**; copy values from your local `backend/.e
 - **Missing key behavior:** backward-compatible optional mode for now (request still executes without dedupe).
 - **Retention:** idempotency records expire after 24 hours for replay lookup (see `backend/migrations/003_create_idempotency_keys_table.sql`). Physical cleanup is still an operational follow-up; expired rows are ignored and can be removed with a scheduled Supabase cleanup later.
 
+- **Migration diagnostic:** `GET /health/appraise` verifies the idempotency table without starting an appraisal. A `503` response names the required migration and confirms that the mobile client can safely retry once without a key.
+- **Recovery behavior:** the mobile client falls back to one unkeyed request only after `IDEMPOTENCY_UNAVAILABLE`, which is emitted before AI or eBay work starts. Apply migration `003_create_idempotency_keys_table.sql` to restore full replay protection.
+
 ### Mobile app
 
 Set in `apps/mobile/.env` (gitignored — copy from `apps/mobile/.env.render`):

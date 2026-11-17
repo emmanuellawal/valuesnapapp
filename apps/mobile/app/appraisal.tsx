@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Platform, useWindowDimensions } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 
 import { Box, Stack as SwissStack, Text, ScreenContainer, SwissPressable } from '@/components/primitives';
 import { ValuationCard, ConfidenceWarning, ProgressIndicator, ValuationCardSkeleton } from '@/components/molecules';
+import { AppraisalWorkstation, SwissSidebarItem } from '@/components/organisms';
+import { BREAKPOINTS, computeRailWidth } from '@/constants/breakpoints';
 import { createMockItemDetails, createMockMarketData } from '@/types/mocks';
 import type { ConfidenceLevel } from '@/types';
 import { getLocalHistory, deleteFromLocalHistory } from '@/lib/localHistory';
@@ -41,6 +44,18 @@ function parseOptionalNumber(value?: string): number | undefined {
 export default function AppraisalReportScreen() {
   const router = useRouter();
   const { isGuest, accessToken } = useAuth();
+  const { width } = useWindowDimensions();
+  // Story 6.10 decision (party-mode 2026-09-04): gate is Platform.OS === 'web'
+  // AND width, not width alone — a native iPad Pro in landscape (>=1024px,
+  // touch-only) has no "desktop browser" per docs/epics.md FR46, and the
+  // workstation's router.replace-based rail nav would misfire there.
+  const isDesktop = Platform.OS === 'web' && width >= BREAKPOINTS.desktop;
+  const railWidth = computeRailWidth(width);
+  const navItems: SwissSidebarItem[] = [
+    { key: 'camera', label: 'Camera', icon: 'camera', isActive: true, onPress: () => router.replace('/camera') },
+    { key: 'history', label: 'History', icon: 'list', isActive: false, onPress: () => router.replace('/history') },
+    { key: 'settings', label: 'Settings', icon: 'settings', isActive: false, onPress: () => router.replace('/settings') },
+  ];
   const params = useLocalSearchParams<{
     imageUri?: string;
     brand?: string;
@@ -51,7 +66,6 @@ export default function AppraisalReportScreen() {
     priceMax?: string;
     confidence?: string;
     pricesAnalyzed?: string;
-    avgDaysToSell?: string;
     _demo?: string;
     id?: string;
   }>();
@@ -141,7 +155,6 @@ export default function AppraisalReportScreen() {
     const { response, imageUri, createdAt, id: valuationId } = detailValuation;
     const itemDetails = response?.itemDetails;
     const marketData = response?.marketData;
-
     function handleDelete() {
       showAlert(
         'Delete valuation',
@@ -176,43 +189,18 @@ export default function AppraisalReportScreen() {
       showAlert('Unable to list', 'No valuation ID found. Please try re-appraising.');
     }
 
-    return (
-      <ScreenContainer>
-        <Stack.Screen options={{ title: 'Valuation', headerShown: false }} />
+    const backButton = (
+      <SwissPressable
+        accessibilityLabel="Go to history"
+        onPress={() => router.replace('/history')}
+        className="self-start py-3 pr-4 mb-6 min-h-[44px] justify-center"
+      >
+        <Text variant="body" className="text-ink-muted">← History</Text>
+      </SwissPressable>
+    );
 
-        <SwissPressable
-          accessibilityLabel="Go back"
-          onPress={() => router.replace('/history')}
-          className="self-start py-3 pr-4 mb-6 min-h-[44px] justify-center"
-        >
-          <Text variant="body" className="text-ink-muted">← Back</Text>
-        </SwissPressable>
-
-        <Text variant="display">Valuation{'\n'}detail</Text>
-        <Text variant="body" className="text-ink-light mt-3">
-          {formatDetailTimestamp(createdAt)}
-        </Text>
-
-        <Box className="h-px bg-divider mt-8" />
-
-        {itemDetails && marketData && (
-          <Box className="mt-8 w-full" testID="detail-valuation">
-            <ValuationCard
-              itemDetails={itemDetails}
-              marketData={marketData}
-              imageUri={imageUri}
-            />
-            <ConfidenceWarning
-              confidence={(marketData.confidence as ConfidenceLevel) ?? 'HIGH'}
-              itemType={itemDetails.itemType ?? ''}
-              brand={itemDetails.brand ?? ''}
-              model={itemDetails.model ?? ''}
-            />
-          </Box>
-        )}
-
-        <Box className="h-px bg-divider mt-8" />
-
+    const summaryAndDelete = (
+      <>
         <SwissStack gap={3} className="mt-8">
           <Text variant="h2">Summary</Text>
           <SwissStack gap={3} className="mt-2">
@@ -277,13 +265,6 @@ export default function AppraisalReportScreen() {
 
         <SwissStack gap={3} className="mt-8 mb-8">
           <SwissPressable
-            accessibilityLabel="List on eBay"
-            onPress={handleEbay}
-            className="py-4 items-center min-h-[44px] justify-center border border-ink"
-          >
-            <Text variant="body" className="font-semibold">List on eBay</Text>
-          </SwissPressable>
-          <SwissPressable
             accessibilityLabel="Delete this valuation"
             onPress={handleDelete}
             className="py-4 items-center min-h-[44px] justify-center"
@@ -291,6 +272,88 @@ export default function AppraisalReportScreen() {
             <Text variant="body" className="text-signal font-semibold">Delete</Text>
           </SwissPressable>
         </SwissStack>
+      </>
+    );
+
+    // Story 6.10 decision (party-mode 2026-09-04): ValuationCard is kept
+    // whole and unmodified as the image pane's content — not split into
+    // exported formatting helpers. See Dev Notes in
+    // docs/sprint-artifacts/6-10-implement-desktop-ux-patterns.md.
+    if (isDesktop) {
+      return (
+        <>
+          <Stack.Screen options={{ title: 'Valuation', headerShown: false }} />
+          <AppraisalWorkstation
+            railWidth={railWidth}
+            navItems={navItems}
+            imagePane={
+              itemDetails && marketData ? (
+                <Box className="w-full" testID="detail-valuation">
+                  <ValuationCard
+                    itemDetails={itemDetails}
+                    marketData={marketData}
+                    imageUri={imageUri}
+                    compact
+                  />
+                </Box>
+              ) : null
+            }
+          >
+            {backButton}
+            <Text variant="display">Valuation{'\n'}detail</Text>
+            <Text variant="body" className="text-ink-light mt-3">
+              {formatDetailTimestamp(createdAt)}
+            </Text>
+            <Box className="h-px bg-divider mt-8" />
+            {itemDetails && marketData && (
+              <Box className="mt-8 w-full">
+                <ConfidenceWarning
+                  confidence={(marketData.confidence as ConfidenceLevel) ?? 'HIGH'}
+                  itemType={itemDetails.itemType ?? ''}
+                  brand={itemDetails.brand ?? ''}
+                  model={itemDetails.model ?? ''}
+                />
+              </Box>
+            )}
+            <Box className="h-px bg-divider mt-8" />
+            {summaryAndDelete}
+          </AppraisalWorkstation>
+        </>
+      );
+    }
+
+    return (
+      <ScreenContainer>
+        <Stack.Screen options={{ title: 'Valuation', headerShown: false }} />
+
+        {backButton}
+
+        <Text variant="display">Valuation{'\n'}detail</Text>
+        <Text variant="body" className="text-ink-light mt-3">
+          {formatDetailTimestamp(createdAt)}
+        </Text>
+
+        <Box className="h-px bg-divider mt-8" />
+
+        {itemDetails && marketData && (
+          <Box className="mt-8 w-full" testID="detail-valuation">
+            <ValuationCard
+              itemDetails={itemDetails}
+              marketData={marketData}
+              imageUri={imageUri}
+            />
+            <ConfidenceWarning
+              confidence={(marketData.confidence as ConfidenceLevel) ?? 'HIGH'}
+              itemType={itemDetails.itemType ?? ''}
+              brand={itemDetails.brand ?? ''}
+              model={itemDetails.model ?? ''}
+            />
+          </Box>
+        )}
+
+        <Box className="h-px bg-divider mt-8" />
+
+        {summaryAndDelete}
       </ScreenContainer>
     );
   }
@@ -324,7 +387,6 @@ export default function AppraisalReportScreen() {
   const fairMarketValue = parseOptionalNumber(params.fairMarketValue);
   const priceMin = parseOptionalNumber(params.priceMin);
   const priceMax = parseOptionalNumber(params.priceMax);
-  const avgDaysToSell = parseOptionalNumber(params.avgDaysToSell);
   const confidence = (params.confidence as ConfidenceLevel | undefined) ?? 'LOW';
 
   const REPORT_ITEM = createMockItemDetails({
@@ -344,30 +406,103 @@ export default function AppraisalReportScreen() {
         ? { min: priceMin, max: priceMax }
         : undefined,
     fairMarketValue,
-    mean: fairMarketValue,
     stdDev: 0,
     confidence,
-    avgDaysToSell: avgDaysToSell && avgDaysToSell > 0 ? avgDaysToSell : undefined,
   });
+
+  const mainBackButton = (
+    <SwissPressable
+      accessibilityLabel="Go back"
+      onPress={() => router.back()}
+      className="self-start py-3 pr-4 mb-6 min-h-[44px] justify-center"
+    >
+      <Text variant="body" className="text-ink-muted">
+        ← Back
+      </Text>
+    </SwissPressable>
+  );
+
+  const mainSummary = (
+    <SwissStack gap={3} className="mt-8">
+      <Text variant="h2">Summary</Text>
+
+      <SwissStack gap={3} className="mt-2">
+        <SwissStack direction="horizontal" gap={2} className="border-b border-divider pb-3">
+          <Text variant="caption" className="text-ink-muted uppercase tracking-wide w-28">Range</Text>
+          <Text variant="body" className="font-semibold">
+            ${REPORT_MARKET.priceRange?.min} – ${REPORT_MARKET.priceRange?.max}
+          </Text>
+        </SwissStack>
+
+        <SwissStack direction="horizontal" gap={2} className="border-b border-divider pb-3">
+          <Text variant="caption" className="text-ink-muted uppercase tracking-wide w-28">Analyzed</Text>
+          <Text variant="body" className="font-semibold">
+            {REPORT_MARKET.pricesAnalyzed} listings
+          </Text>
+        </SwissStack>
+
+        <SwissStack direction="horizontal" gap={2} className="border-b border-divider pb-3">
+          <Text variant="caption" className="text-ink-muted uppercase tracking-wide w-28">Confidence</Text>
+          <Text variant="body" className="font-semibold">
+            {REPORT_MARKET.confidence}
+          </Text>
+        </SwissStack>
+      </SwissStack>
+    </SwissStack>
+  );
+
+  // Story 6.10 decision (party-mode 2026-09-04): ValuationCard is kept
+  // whole and unmodified as the image pane's content — not split into
+  // exported formatting helpers.
+  if (isDesktop) {
+    return (
+      <>
+        <Stack.Screen options={{ title: 'Appraisal', headerShown: false }} />
+        <AppraisalWorkstation
+          railWidth={railWidth}
+          navItems={navItems}
+          imagePane={
+            <Box className="w-full" testID="appraisal-valuation">
+              <ValuationCard
+                itemDetails={REPORT_ITEM}
+                marketData={REPORT_MARKET}
+                imageUri={params.imageUri}
+                compact
+              />
+            </Box>
+          }
+        >
+          {mainBackButton}
+          <Text variant="display">Appraisal{'\n'}report</Text>
+          <Text variant="body" className="text-ink-light mt-3">
+            Identified item and market estimate
+          </Text>
+          <Box className="h-px bg-divider mt-8" />
+          <Box className="mt-8 w-full">
+            <ConfidenceWarning
+              confidence={REPORT_MARKET.confidence}
+              itemType={REPORT_ITEM.itemType}
+              brand={REPORT_ITEM.brand}
+              model={REPORT_ITEM.model}
+            />
+          </Box>
+          <Box className="h-px bg-divider mt-8" />
+          {mainSummary}
+        </AppraisalWorkstation>
+      </>
+    );
+  }
 
   return (
     <ScreenContainer>
       <Stack.Screen options={{ title: 'Appraisal', headerShown: false }} />
 
       {/* Back — typographic, Swiss-minimal, 44px min touch target */}
-      <SwissPressable
-        accessibilityLabel="Go back"
-        onPress={() => router.back()}
-        className="self-start py-3 pr-4 mb-6 min-h-[44px] justify-center"
-      >
-        <Text variant="body" className="text-ink-muted">
-          ← Back
-        </Text>
-      </SwissPressable>
+      {mainBackButton}
 
       <Text variant="display">Appraisal{'\n'}report</Text>
       <Text variant="body" className="text-ink-light mt-3">
-        Market estimate based on recent sales
+        Identified item and market estimate
       </Text>
 
       <Box className="h-px bg-divider mt-8" />
@@ -392,32 +527,7 @@ export default function AppraisalReportScreen() {
       <Box className="h-px bg-divider mt-8" />
 
       {/* Summary — data-dense, Swiss hierarchy */}
-      <SwissStack gap={3} className="mt-8">
-        <Text variant="h2">Summary</Text>
-        
-        <SwissStack gap={3} className="mt-2">
-          <SwissStack direction="horizontal" gap={2} className="border-b border-divider pb-3">
-            <Text variant="caption" className="text-ink-muted uppercase tracking-wide w-28">Range</Text>
-            <Text variant="body" className="font-semibold">
-              ${REPORT_MARKET.priceRange?.min} – ${REPORT_MARKET.priceRange?.max}
-            </Text>
-          </SwissStack>
-          
-          <SwissStack direction="horizontal" gap={2} className="border-b border-divider pb-3">
-            <Text variant="caption" className="text-ink-muted uppercase tracking-wide w-28">Analyzed</Text>
-            <Text variant="body" className="font-semibold">
-              {REPORT_MARKET.pricesAnalyzed} listings
-            </Text>
-          </SwissStack>
-          
-          <SwissStack direction="horizontal" gap={2} className="border-b border-divider pb-3">
-            <Text variant="caption" className="text-ink-muted uppercase tracking-wide w-28">Confidence</Text>
-            <Text variant="body" className="font-semibold">
-              {REPORT_MARKET.confidence}
-            </Text>
-          </SwissStack>
-        </SwissStack>
-      </SwissStack>
+      {mainSummary}
     </ScreenContainer>
   );
 }

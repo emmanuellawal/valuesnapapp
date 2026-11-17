@@ -4,6 +4,7 @@ import {
   PressableProps,
   PressableStateCallbackType,
   StyleProp,
+  View,
   ViewStyle,
   NativeSyntheticEvent,
   TargetedEvent,
@@ -28,6 +29,7 @@ export interface SwissPressableProps extends Omit<PressableProps, 'accessibility
  */
 const OPACITY_PRESSED = 0.6;
 const OPACITY_DISABLED = 0.4;
+const OPACITY_HOVERED = 0.85;
 
 const FOCUS_STYLE_WEB: ViewStyle = {
   outlineStyle: 'solid',
@@ -41,17 +43,18 @@ const FOCUS_STYLE_NATIVE: ViewStyle = {
   borderColor: '#000000',
 };
 
-export function SwissPressable({
-  accessibilityLabel,
-  disabled = false,
-  className,
-  children,
-  style,
-  onFocus,
-  onBlur,
-  accessibilityState,
-  ...props
-}: SwissPressableProps) {
+export const SwissPressable = React.forwardRef<View, SwissPressableProps>(function SwissPressable({
+    accessibilityLabel,
+    accessibilityRole = 'button',
+    disabled = false,
+    className,
+    children,
+    style,
+    onFocus,
+    onBlur,
+    accessibilityState,
+    ...props
+  }, ref) {
   const [isFocused, setIsFocused] = useState(false);
 
   const handleFocus = useCallback(
@@ -70,22 +73,30 @@ export function SwissPressable({
     [onBlur],
   );
 
-  const mergedAccessibilityState = {
-    ...accessibilityState,
-    disabled,
-  };
+  const mergedAccessibilityState = disabled
+    ? { ...accessibilityState, disabled: true }
+    : accessibilityState;
 
   return (
     <Pressable
-      className={className}
+      ref={ref}
+      className={`${className ?? ''} hover:opacity-[0.85] active:!opacity-60 disabled:!opacity-40`}
       disabled={disabled}
-      accessibilityRole="button"
+      accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityState={mergedAccessibilityState}
       onFocus={handleFocus}
       onBlur={handleBlur}
       style={(state: PressableStateCallbackType) => {
         const { pressed } = state;
+        // react-native-web's Pressable passes { pressed, focused, hovered }
+        // to the style callback on web (node_modules/react-native-web/dist/exports/Pressable/index.js:81-85);
+        // core PressableStateCallbackType only types `pressed`, so cast
+        // explicitly. On native, `hovered` is never set (stays undefined),
+        // making this branch a no-op there.
+        const hovered = Boolean(
+          (state as PressableStateCallbackType & { hovered?: boolean }).hovered,
+        );
         const baseStyles: StyleProp<ViewStyle> =
           typeof style === 'function' ? style(state) : style;
 
@@ -94,6 +105,8 @@ export function SwissPressable({
           opacity = OPACITY_DISABLED;
         } else if (pressed) {
           opacity = OPACITY_PRESSED;
+        } else if (hovered) {
+          opacity = OPACITY_HOVERED;
         }
 
         return [
@@ -108,6 +121,8 @@ export function SwissPressable({
       {children}
     </Pressable>
   );
-}
+});
+
+SwissPressable.displayName = 'SwissPressable';
 
 export default SwissPressable;

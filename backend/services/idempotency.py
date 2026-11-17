@@ -63,6 +63,15 @@ class AppraiseIdempotencyRepository:
         except ValueError:
             return False
 
+    def check_available(self) -> bool:
+        """Verify the required table is reachable without mutating it."""
+        try:
+            self._client().table(self.TABLE).select("id").limit(1).execute()
+            return True
+        except Exception as e:
+            logger.error(f"Idempotency availability check failed: {e}")
+            raise IdempotencyUnavailableError("Idempotency store unavailable") from e
+
     @staticmethod
     def _row_to_claim(row: dict, now: datetime) -> IdempotencyClaim:
         if AppraiseIdempotencyRepository._is_expired(row.get("expires_at"), now):
@@ -151,6 +160,25 @@ class AppraiseIdempotencyRepository:
             except Exception as e:
                 logger.error(f"Idempotency reservation failed: {e}")
                 raise IdempotencyUnavailableError("Unable to reserve idempotency key") from e
+
+    def abort_request(
+        self,
+        *,
+        principal_type: str,
+        principal_id: str,
+        idempotency_key: str,
+    ) -> bool:
+        """Release a processing reservation so the key can be retried."""
+        try:
+            self._client().table(self.TABLE).delete().eq(
+                "endpoint", self.ENDPOINT
+            ).eq("principal_type", principal_type).eq("principal_id", principal_id).eq(
+                "idempotency_key", idempotency_key
+            ).eq("state", "processing").execute()
+            return True
+        except Exception as e:
+            logger.warning(f"Idempotency abort failed: {e}")
+            return False
 
     def complete_request(
         self,

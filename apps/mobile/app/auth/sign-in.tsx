@@ -90,7 +90,7 @@ export default function SignInScreen() {
     if (env.useMock) {
       setSubmitState('idle');
       showAlert('Mock Mode', 'Sign in bypassed in mock mode.', [
-        { text: 'OK', onPress: () => router.replace('/') },
+        { text: 'OK', onPress: () => router.replace('/camera') },
       ]);
       return;
     }
@@ -108,7 +108,7 @@ export default function SignInScreen() {
       }
 
       // Session activates → onAuthStateChange(SIGNED_IN) fires → AuthContext updates automatically
-      router.replace('/');
+      router.replace('/camera');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setServerError(mapSignInError(message));
@@ -125,7 +125,7 @@ export default function SignInScreen() {
     if (env.useMock) {
       setIsOAuthLoading(false);
       showAlert('Mock Mode', 'Google OAuth bypassed in mock mode.', [
-        { text: 'OK', onPress: () => router.replace('/') },
+        { text: 'OK', onPress: () => router.replace('/camera') },
       ]);
       return;
     }
@@ -166,7 +166,7 @@ export default function SignInScreen() {
         }
 
         // Session established via exchangeCodeForSession → onAuthStateChange(SIGNED_IN) fires
-        router.replace('/');
+        router.replace('/camera');
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';

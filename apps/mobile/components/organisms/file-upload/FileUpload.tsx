@@ -80,7 +80,8 @@ const getImageDimensions = (uri: string): Promise<{ width: number; height: numbe
 export function FileUpload({ 
   onPhotoCapture, 
   onStateChange,
-  testID 
+  testID,
+  focusRef,
 }: FileUploadProps) {
   const [uploadState, setUploadState] = useState<FileUploadState>('idle');
   const [uploadError, setUploadError] = useState<FileUploadError | null>(null);
@@ -412,6 +413,7 @@ export function FileUpload({
         onDrop={Platform.OS === 'web' ? handleDrop : undefined}
       >
         <SwissPressable
+          ref={focusRef}
           onPress={handleFilePick}
           accessibilityLabel="Click to browse files or drag and drop an image"
           accessibilityRole="button"

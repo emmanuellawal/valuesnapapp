@@ -128,3 +128,27 @@ class TestAppraiseIdempotencyRepository:
         update_query.eq.assert_any_call("principal_type", "guest")
         update_query.eq.assert_any_call("principal_id", "guest-123")
         update_query.eq.assert_any_call("idempotency_key", "idem-abc")
+
+    @patch("backend.services.idempotency.get_supabase")
+    def test_abort_request_deletes_processing_record(self, mock_get_supabase):
+        client = MagicMock()
+        table = client.table.return_value
+        delete_query = MagicMock()
+        delete_query.eq.return_value = delete_query
+        delete_query.execute.return_value = MagicMock(data=[{"id": "1"}])
+        table.delete.return_value = delete_query
+        mock_get_supabase.return_value = client
+
+        repo = AppraiseIdempotencyRepository()
+        ok = repo.abort_request(
+            principal_type="guest",
+            principal_id="guest-123",
+            idempotency_key="idem-abc",
+        )
+
+        assert ok is True
+        delete_query.eq.assert_any_call("endpoint", "/api/appraise")
+        delete_query.eq.assert_any_call("principal_type", "guest")
+        delete_query.eq.assert_any_call("principal_id", "guest-123")
+        delete_query.eq.assert_any_call("idempotency_key", "idem-abc")
+        delete_query.eq.assert_any_call("state", "processing")

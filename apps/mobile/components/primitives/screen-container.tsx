@@ -51,6 +51,7 @@ export function ScreenContainer({ className, wide, children, ...scrollProps }: S
 
   return (
     <ScrollView
+      testID="screen-container"
       className="flex-1 bg-paper"
       contentContainerStyle={{ flexGrow: 1 }}
       showsVerticalScrollIndicator={false}

@@ -82,6 +82,7 @@ describe('Story 6.8 rate limit handling', () => {
       session: { user: { id: 'user-1' } },
       user: { id: 'user-1' },
       isGuest: false,
+      accessToken: 'token',
       isLoading: false,
       signOut: jest.fn(),
     });
@@ -99,6 +100,9 @@ describe('Story 6.8 rate limit handling', () => {
       await triggerCapture.props.onPress();
     });
 
+    expect(mockAppraise).toHaveBeenCalledWith('abc123', 'guest-session-1', {
+      accessToken: 'token',
+    });
     expect(renderer!.root.findByProps({ children: "You've reached your limit" })).toBeTruthy();
     expect(renderer!.root.findByProps({ children: 'Try again in 45 minutes' })).toBeTruthy();
     expect(

@@ -95,9 +95,10 @@ const SERVER_HISTORY_RESPONSE = {
         prices_analyzed: 12,
         price_range: { min: 100, max: 200 },
         fair_market_value: 150,
+        current_asking_estimate: 150,
+        pricing_basis: 'active_listings',
         mean: 148,
         std_dev: 12,
-        avg_days_to_sell: 5,
         confidence: 'HIGH',
       },
       confidence_data: { market_confidence: 'HIGH' },
@@ -140,6 +141,16 @@ test.describe('Guest-to-account migration flow', () => {
       });
     });
 
+    // Story 6.12: the retry queue probes /health before every migrate call. Without this
+    // stub the probe hits localhost:8000 (nothing listening) and the import never runs.
+    await page.route('**/health', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'healthy' }),
+      });
+    });
+
     await page.route('**/api/migrate-guest', async (route) => {
       expect(route.request().method()).toBe('POST');
       expect(route.request().postDataJSON()).toEqual({ guest_session_id: 'guest-123' });
@@ -172,5 +183,188 @@ test.describe('Guest-to-account migration flow', () => {
     await expect(page.getByText('1 items valued')).toBeVisible();
     await expect(page.getByText('Seiko SKX007')).toBeVisible();
     expect(valuationsRequests).toBeGreaterThanOrEqual(2);
+  });
+
+  test('keeps the import pending and never POSTs when the backend health probe fails', async ({ page }) => {
+    let valuationsRequests = 0;
+    let migrateRequests = 0;
+
+    await installSupabasePasswordAuthStub(page, {
+      session: SESSION,
+      user: USER,
+      signInEmail: SIGN_IN_EMAIL,
+      signInPassword: SIGN_IN_PASSWORD,
+      supabaseAuthPath: SUPABASE_AUTH_PATH,
+    });
+
+    await page.addInitScript(
+      ({ historyKey, guestSessionKey, localValuation }) => {
+        window.localStorage.setItem(historyKey, JSON.stringify([localValuation]));
+        window.localStorage.setItem(guestSessionKey, 'guest-123');
+      },
+      {
+        historyKey: HISTORY_KEY,
+        guestSessionKey: GUEST_SESSION_KEY,
+        localValuation: LOCAL_VALUATION,
+      },
+    );
+
+    await page.route('**/api/valuations', async (route) => {
+      valuationsRequests += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ valuations: [] }),
+      });
+    });
+
+    await page.route('**/health', async (route) => {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'unhealthy' }),
+      });
+    });
+
+    await page.route('**/api/migrate-guest', async (route) => {
+      migrateRequests += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ migrated: 1 }),
+      });
+    });
+
+    await page.goto('/auth/sign-in');
+    await page.waitForLoadState('networkidle');
+    await waitForAuthSnapshot(page);
+    await signInWithEmail(page, {
+      email: SIGN_IN_EMAIL,
+      password: SIGN_IN_PASSWORD,
+    });
+    await waitForAuthenticatedSnapshot(page);
+
+    await page.goto('/history');
+    await page.waitForLoadState('networkidle');
+    await page.getByText('Your collection').waitFor({ timeout: 15000 });
+
+    const migrationBanner = page.getByTestId('migration-banner');
+    await expect(migrationBanner).toContainText('1 valuation');
+
+    await page.getByTestId('migration-import-button').click();
+
+    await expect(page.getByTestId('migration-pending')).toBeVisible();
+    await expect(migrationBanner).toBeVisible();
+    expect(migrateRequests).toBe(0);
+    expect(valuationsRequests).toBeGreaterThanOrEqual(1);
+
+    const rawRecord = await page.evaluate(() =>
+      window.localStorage.getItem('valuesnap:pending_migration'),
+    );
+    expect(rawRecord).not.toBeNull();
+    expect(rawRecord).toContain('user-123');
+    expect(rawRecord).toContain('guest-123');
+    expect(rawRecord).not.toContain('e2e-access-token');
+    expect(rawRecord).not.toContain('e2e-refresh-token');
+  });
+
+  test('flushes a queued pending migration automatically when backend health recovers on reconnect', async ({
+    page,
+  }) => {
+    let isHealthy = false;
+    let migrateRequests = 0;
+
+    await installSupabasePasswordAuthStub(page, {
+      session: SESSION,
+      user: USER,
+      signInEmail: SIGN_IN_EMAIL,
+      signInPassword: SIGN_IN_PASSWORD,
+      supabaseAuthPath: SUPABASE_AUTH_PATH,
+    });
+
+    await page.addInitScript(
+      ({ historyKey, guestSessionKey, localValuation }) => {
+        window.localStorage.setItem(historyKey, JSON.stringify([localValuation]));
+        window.localStorage.setItem(guestSessionKey, 'guest-123');
+      },
+      {
+        historyKey: HISTORY_KEY,
+        guestSessionKey: GUEST_SESSION_KEY,
+        localValuation: LOCAL_VALUATION,
+      },
+    );
+
+    await page.route('**/api/valuations', async (route) => {
+      const body = migrateRequests > 0 ? SERVER_HISTORY_RESPONSE : { valuations: [] };
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      });
+    });
+
+    await page.route('**/health', async (route) => {
+      await route.fulfill({
+        status: isHealthy ? 200 : 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: isHealthy ? 'healthy' : 'unhealthy' }),
+      });
+    });
+
+    await page.route('**/api/migrate-guest', async (route) => {
+      migrateRequests += 1;
+      expect(route.request().postDataJSON()).toEqual({ guest_session_id: 'guest-123' });
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ migrated: 1 }),
+      });
+    });
+
+    await page.goto('/auth/sign-in');
+    await page.waitForLoadState('networkidle');
+    await waitForAuthSnapshot(page);
+    await signInWithEmail(page, {
+      email: SIGN_IN_EMAIL,
+      password: SIGN_IN_PASSWORD,
+    });
+    await waitForAuthenticatedSnapshot(page);
+
+    await page.goto('/history');
+    await page.waitForLoadState('networkidle');
+    await page.getByText('Your collection').waitFor({ timeout: 15000 });
+
+    const migrationBanner = page.getByTestId('migration-banner');
+    await page.getByTestId('migration-import-button').click();
+    await expect(page.getByTestId('migration-pending')).toBeVisible();
+    expect(migrateRequests).toBe(0);
+
+    // Backdate lastAttemptAt past the 60s burst guard, restore /health, and fire offline -> online.
+    await page.evaluate(() => {
+      const key = 'valuesnap:pending_migration';
+      const parsed = JSON.parse(window.localStorage.getItem(key) ?? '{}');
+      parsed.lastAttemptAt = new Date(Date.now() - 120_000).toISOString();
+      window.localStorage.setItem(key, JSON.stringify(parsed));
+    });
+    isHealthy = true;
+
+    // Dispatch offline and wait for React to commit the offline state before dispatching online;
+    // firing both in the same synchronous tick gets batched by React 19 into a no-op (true -> true).
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('offline'));
+    });
+    await expect(page.getByText('Offline — showing cached valuations')).toBeVisible();
+
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('online'));
+    });
+
+    await expect(migrationBanner).toHaveCount(0);
+    await expect(page.getByText('Seiko SKX007')).toBeVisible();
+    expect(migrateRequests).toBe(1);
+    const clearedRecord = await page.evaluate(() =>
+      window.localStorage.getItem('valuesnap:pending_migration'),
+    );
+    expect(clearedRecord).toBeNull();
   });
 });

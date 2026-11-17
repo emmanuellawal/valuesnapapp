@@ -46,7 +46,8 @@ const CAMERA_QUALITY = 0.8;
 export function CameraCapture({ 
   onPhotoCapture, 
   onStateChange,
-  testID = 'camera-capture'
+  testID = 'camera-capture',
+  focusRef,
 }: CameraCaptureProps) {
   // Camera permission hook from expo-camera
   const [permission, requestPermission] = useCameraPermissions();
@@ -236,6 +237,7 @@ export function CameraCapture({
           testID={`${testID}-idle`}
         >
           <SwissPressable
+            ref={focusRef}
             onPress={handleActivateCamera}
             accessibilityLabel="Take a photo"
             accessibilityRole="button"
@@ -340,6 +342,7 @@ export function CameraCapture({
           testID={`${testID}-ready`}
         >
           <SwissPressable
+            ref={focusRef}
             onPress={handleLaunchCamera}
             accessibilityLabel="Take a photo"
             accessibilityRole="button"

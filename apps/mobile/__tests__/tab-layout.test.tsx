@@ -8,6 +8,7 @@ const mockSwissTabBar = jest.fn();
 jest.mock('react-native', () => ({
   View: 'View',
   Pressable: 'Pressable',
+  ScrollView: 'ScrollView',
   useWindowDimensions: (...args: unknown[]) => mockUseWindowDimensions(...args),
   Appearance: {
     getColorScheme: jest.fn(() => 'light'),
@@ -102,6 +103,10 @@ jest.mock('@/components/organisms/swiss-tab-bar', () => ({
 
 const TabLayout = require('../app/(tabs)/_layout').default;
 const { computeRailWidth } = require('@/constants/breakpoints');
+const MOCK_TABS = 'mock-tabs' as React.ElementType;
+const MOCK_SCREEN = 'mock-screen' as React.ElementType;
+const MOCK_TAB_BAR = 'mock-tabbar' as React.ElementType;
+const MOCK_SCROLL_VIEW = 'ScrollView' as React.ElementType;
 
 function renderLayout() {
   let renderer: ReturnType<typeof create>;
@@ -121,8 +126,8 @@ describe('TabLayout (Story 6-1)', () => {
   it('uses SwissTabBar below desktop breakpoint', () => {
     mockUseWindowDimensions.mockReturnValue({ width: 800, height: 900, scale: 1, fontScale: 1 });
     const renderer = renderLayout();
-    const tabs = renderer.root.findByType('mock-tabs');
-    const screens = renderer.root.findAllByType('mock-screen');
+    const tabs = renderer.root.findByType(MOCK_TABS);
+    const screens = renderer.root.findAllByType(MOCK_SCREEN);
 
     expect(tabs.props.screenOptions.headerShown).toBe(false);
     expect(tabs.props.screenOptions.tabBarPosition).toBe('bottom');
@@ -131,10 +136,25 @@ describe('TabLayout (Story 6-1)', () => {
     expect(mockSwissSidebar).not.toHaveBeenCalled();
   });
 
+  it('renders SwissTabBar via the tabBar render-prop and not nested inside a ScrollView (AC #2 regression guard)', () => {
+    // Guards against a future regression where someone wraps the tabBar
+    // render-prop output (or its children) in a ScrollView — which would
+    // let the tab bar scroll away with content instead of staying pinned.
+    mockUseWindowDimensions.mockReturnValue({ width: 800, height: 900, scale: 1, fontScale: 1 });
+    const renderer = renderLayout();
+    const tabBarInstance = renderer.root.findByType(MOCK_TAB_BAR);
+    const scrollViews = renderer.root.findAllByType(MOCK_SCROLL_VIEW);
+
+    expect(tabBarInstance).toBeTruthy();
+    for (const scrollView of scrollViews) {
+      expect(scrollView.findAllByType(MOCK_TAB_BAR)).toHaveLength(0);
+    }
+  });
+
   it('uses SwissSidebar at desktop width and passes railWidth', () => {
     mockUseWindowDimensions.mockReturnValue({ width: 1024, height: 900, scale: 1, fontScale: 1 });
     const renderer = renderLayout();
-    const tabs = renderer.root.findByType('mock-tabs');
+    const tabs = renderer.root.findByType(MOCK_TABS);
 
     expect(tabs.props.screenOptions.headerShown).toBe(false);
     expect(tabs.props.screenOptions.tabBarPosition).toBe('left');

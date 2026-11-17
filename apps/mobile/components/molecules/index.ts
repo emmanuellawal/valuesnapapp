@@ -21,3 +21,5 @@ export { BatchCardSkeleton } from './batch-card-skeleton';
 export { GuestBanner } from './guest-banner';
 export { NetworkBanner } from './network-banner';
 export type { NetworkBannerProps } from './network-banner';
+export { ValuationResultOverlay } from './valuation-result-overlay';
+export type { ValuationResultOverlayProps } from './valuation-result-overlay';

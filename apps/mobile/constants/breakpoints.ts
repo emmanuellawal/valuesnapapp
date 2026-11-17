@@ -12,6 +12,14 @@ export function computeRailWidth(viewportWidth: number): number {
   return Math.max(80, Math.min(Math.floor(viewportWidth * 0.1), 144));
 }
 
+/**
+ * Fixed rail width when the desktop sidebar is collapsed (Story 6.11 AC2/AC3).
+ * Arithmetic: 60 − 2 × 8px (`px-2`) = 44px per-item width, matching the
+ * project's 44×44 minimum touch target (docs/ux-design-specification.md#L1194-1197).
+ * Do not "tidy" this to 56 — that would drop items below 44px and fail AC3.
+ */
+export const COLLAPSED_RAIL_WIDTH = 60;
+
 export interface GridConfig {
   numColumns: number;
   gap: number;

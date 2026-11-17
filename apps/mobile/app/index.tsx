@@ -28,19 +28,24 @@ export default function LandingPage() {
       </Head>
 
       <ScrollView
-        style={{ flex: 1, backgroundColor: '#FFFFFF' }}
+        className="flex-1 bg-paper"
+        style={{ flex: 1 }}
         contentContainerStyle={{ flexGrow: 1 }}
       >
-        <Box className="flex-1 bg-paper px-8 pt-16 pb-12">
+        <Box className="flex-1 bg-paper px-6 sm:px-8 pt-16 pb-12">
           <Stack gap={8} className="max-w-screen-sm">
-            <Text variant="display">Photo → Value → List</Text>
+            <Text variant="display" accessibilityRole="header" aria-level={1}>
+              Photo → Value → List
+            </Text>
             <Text variant="body" className="text-ink-muted">
-              Photograph any item. Get an instant market price. Generate a selling listing.
+              Photograph any item. Get an instant market price estimate. Generate a selling listing.
             </Text>
 
             <Stack gap={4} className="pt-4">
               <Text variant="body-sm">AI identifies your item from a photo</Text>
-              <Text variant="body-sm">Live eBay market data — real prices, not guesses</Text>
+              <Text variant="body-sm">
+                Live eBay market data — price estimates from active listings, not guaranteed sale prices
+              </Text>
               <Text variant="body-sm">One-tap listing generation for eBay</Text>
             </Stack>
 

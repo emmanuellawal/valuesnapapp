@@ -205,7 +205,7 @@ describe('DeleteConfirmScreen — execution', () => {
     });
   });
 
-  it('signs out and navigates to tabs on successful deletion', async () => {
+  it('signs out and navigates to /camera on successful deletion', async () => {
     const renderer = await renderReady();
 
     mockGetSession.mockResolvedValue({
@@ -218,7 +218,7 @@ describe('DeleteConfirmScreen — execution', () => {
     });
 
     expect(mockSignOut).toHaveBeenCalledTimes(1);
-    expect(mockRouterReplace).toHaveBeenCalledWith('/');
+    expect(mockRouterReplace).toHaveBeenCalledWith('/camera');
     expect(() => findByTestId(renderer, 'delete-confirm-error')).toThrow();
   });
 
@@ -271,6 +271,6 @@ describe('DeleteConfirmScreen — execution', () => {
     expect(global.fetch).not.toHaveBeenCalled();
     expect(mockGetSession).not.toHaveBeenCalled();
     expect(mockSignOut).toHaveBeenCalledTimes(1);
-    expect(mockRouterReplace).toHaveBeenCalledWith('/');
+    expect(mockRouterReplace).toHaveBeenCalledWith('/camera');
   });
 });

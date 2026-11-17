@@ -45,6 +45,11 @@ jest.mock('react-native-safe-area-context', () => ({
   ),
 }));
 
+// Story 6.11 AC11 permitted edit #1: swiss-sidebar.tsx now imports Feather at
+// module scope; the react-native mock above has no processColor/NativeModules/
+// TouchableHighlight, so importing the real Feather chain breaks without this.
+jest.mock('@expo/vector-icons/Feather', () => 'Feather');
+
 const { SwissSidebar } = require('@/components/organisms/swiss-sidebar');
 const { SwissTabBar } = require('@/components/organisms/swiss-tab-bar');
 
@@ -103,11 +108,24 @@ function renderNode(element: React.ReactElement) {
   return renderer!;
 }
 
+function findHostPressableByLabel(renderer: ReturnType<typeof create>, accessibilityLabel: string) {
+  const pressable = renderer.root
+    .findAllByProps({ accessibilityLabel })
+    .find((node) => node.type === 'Pressable');
+  if (!pressable) {
+    throw new Error(`Could not find Pressable host with label "${accessibilityLabel}"`);
+  }
+  return pressable;
+}
+
 describe('SwissSidebar real surface regression', () => {
   it('applies provided railWidth instead of fixed 240', () => {
+    // Story 6.11 AC11 permitted edit #2: retargeted from the `tablist` node
+    // to the rail's testID — see swiss-sidebar-nav.story-6-10.test.tsx for
+    // why (AC5's ARIA restructuring moved width off the tablist).
     const renderer = renderNode(<SwissSidebar {...createTabBarProps(0)} railWidth={102} />);
-    const tabList = renderer.root.findByProps({ accessibilityRole: 'tablist' });
-    const style = flattenStyle(tabList.props.style);
+    const rail = renderer.root.findByProps({ testID: 'swiss-sidebar-rail' });
+    const style = flattenStyle(rail.props.style);
 
     expect(style.width).toBe(102);
     expect(style.width).not.toBe(240);
@@ -118,8 +136,8 @@ describe('SwissSidebar real surface regression', () => {
   it('marks active tab selected and applies active text class', () => {
     const renderer = renderNode(<SwissSidebar {...createTabBarProps(1)} railWidth={102} />);
 
-    const historyTab = renderer.root.findByProps({ accessibilityLabel: 'History tab' });
-    const cameraTab = renderer.root.findByProps({ accessibilityLabel: 'Camera tab' });
+    const historyTab = findHostPressableByLabel(renderer, 'History tab');
+    const cameraTab = findHostPressableByLabel(renderer, 'Camera tab');
 
     expect(historyTab.props.accessibilityState).toEqual({ selected: true });
     expect(cameraTab.props.accessibilityState).toEqual({});

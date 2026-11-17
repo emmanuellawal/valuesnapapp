@@ -1,6 +1,6 @@
 # Story 6.8: Handle Rate Limit Exceeded
 
-Status: in-progress
+Status: done
 
 ## Story
 
@@ -52,9 +52,9 @@ so that I understand why appraisal isn't working and know how long to wait befor
 
 ### Review Follow-ups (AI)
 
-- [ ] [AI-Review][High] Move appraise rate-limit enforcement to run after idempotency replay/in-progress handling so retries using the same idempotency key do not consume quota or return 429 before replay is served. Add a backend regression test for repeated requests with the same `Idempotency-Key`.
-- [ ] [AI-Review][High] Thread the authenticated Supabase access token into `appraise()` requests and send `Authorization: Bearer <token>` for signed-in users. Without it, `_resolve_appraise_principal()` always falls back to `guest_session_id`, so the authenticated `100/hour` tier is unreachable.
-- [ ] [AI-Review][Medium] Add backend coverage for `/api/appraise` rate limiting, including `Retry-After` header behavior and auth-vs-guest tier selection. Current backend rate-limit tests only cover delete-account, migrate-guest, and get-valuations.
+- [x] [AI-Review][High] Move appraise rate-limit enforcement to run after idempotency replay/in-progress handling so retries using the same idempotency key do not consume quota or return 429 before replay is served. Add a backend regression test for repeated requests with the same `Idempotency-Key`. — Resolved: `appraise_item()` now calls `idempotency_repo.start_request()` (`main.py:198`) before `enforce_user_rate_limit()` (`main.py:242`); a 429 on the rate-limit call triggers `idempotency_repo.abort_request()` (`main.py:245`) so the reservation is released and the key remains retryable. Covered by `test_appraise_idempotency_replay_does_not_consume_rate_limit` and `test_rate_limited_appraise_releases_idempotency_key` in `backend/tests/test_rate_limits.py`.
+- [x] [AI-Review][High] Thread the authenticated Supabase access token into `appraise()` requests and send `Authorization: Bearer <token>` for signed-in users. Without it, `_resolve_appraise_principal()` always falls back to `guest_session_id`, so the authenticated `100/hour` tier is unreachable. — Resolved: `appraise()` accepts `options.accessToken` and sets `headers.Authorization = \`Bearer ${accessToken}\`` (`apps/mobile/lib/api.ts:142-143`); `camera.tsx` reads `accessToken` from `useAuth()` and passes it through (`camera.tsx:80,208`). Covered by a new Authorization-header test in `apps/mobile/__tests__/api.test.ts` and an updated authenticated-user assertion in `apps/mobile/__tests__/camera-rate-limit.story-6-8.test.tsx`.
+- [x] [AI-Review][Medium] Add backend coverage for `/api/appraise` rate limiting, including `Retry-After` header behavior and auth-vs-guest tier selection. Current backend rate-limit tests only cover delete-account, migrate-guest, and get-valuations. — Resolved: `backend/tests/test_rate_limits.py` rewritten with a dedicated `TestAppraiseRateLimits` class covering guest 429 (`test_appraise_guest_rate_limited_returns_429`), authenticated 429 (`test_appraise_auth_rate_limited_returns_429`), idempotency replay bypass, and the abort-on-429 release path. `backend/tests/test_idempotency_repository.py` adds `test_abort_request_deletes_processing_record` for the new `IdempotencyRepository.abort_request()` method.
 
 ### Summary
 
@@ -154,8 +154,9 @@ GPT-5.3-Codex
 
 - `cd apps/mobile && npm test -- --runInBand __tests__/api.test.ts __tests__/camera-rate-limit.story-6-8.test.tsx`
 - `cd apps/mobile && npm test -- --runInBand __tests__/api.test.ts __tests__/camera-rate-limit.story-6-8.test.tsx __tests__/error-state.test.tsx __tests__/camera-offline-appraise-error.story-6-4.test.tsx`
-- `cd apps/mobile && npm test -- --runInBand`
-- `cd backend && pytest -q` (blocked in current environment by missing Python dependencies: `fastapi`, `pydantic`, `supabase`, `httpx`)
+- `cd apps/mobile && npm test -- --runInBand` → 40 suites / 359 tests / 1 snapshot passed
+- `cd backend && python -m pytest tests/test_idempotency_repository.py tests/test_rate_limits.py -q` → 12 passed
+- `cd backend && python -m pytest -q` (full suite) → 172 passed, 10 skipped, 0 failed
 
 ### Completion Notes List
 
@@ -164,11 +165,16 @@ GPT-5.3-Codex
 - Updated RATE_LIMIT UI copy to "You've reached your limit" and added an explicit dismiss action in `ErrorState`.
 - Wired camera RATE_LIMIT rendering: dynamic wait-time suggestion, retry suppression, dismiss action, and guest upgrade CTA.
 - Added Story 6.8 regression tests for API 429 header handling and camera rate-limit UX.
-- Verified mobile regression safety with full suite pass (`40/40` suites, `357/357` tests).
+- **Review follow-up fixes (2026-08-17):** reordered `appraise_item()` so idempotency replay is checked before rate-limit enforcement; added `IdempotencyRepository.abort_request()` to release the processing reservation when a keyed request is rate-limited (429), keeping the key retryable; threaded `accessToken` from `useAuth()` through `camera.tsx` → `appraise()` → `Authorization: Bearer` header in `api.ts`; rewrote `backend/tests/test_rate_limits.py` with a dedicated `TestAppraiseRateLimits` class (guest 429, auth 429, idempotency-replay-bypasses-rate-limit, abort-releases-key) and added `test_abort_request_deletes_processing_record` to `backend/tests/test_idempotency_repository.py`.
+- Verified full regression safety: mobile 40/40 suites (359/359 tests), backend 172 passed / 10 skipped / 0 failed.
+- **Process note:** this story's completion was originally recorded in a prior session, but a workspace-path fault meant the doc/status edits (this file, `sprint-status.yaml`) never persisted to disk even though the code and test changes did. Reconciled on 2026-08-17 by re-verifying the code against the original 3 review findings and re-running the full test suite before marking done.
 
 ### File List
 
 - `backend/main.py`
+- `backend/services/idempotency.py`
+- `backend/tests/test_idempotency_repository.py`
+- `backend/tests/test_rate_limits.py`
 - `apps/mobile/lib/api.ts`
 - `apps/mobile/components/molecules/error-state.tsx`
 - `apps/mobile/app/(tabs)/camera.tsx`
@@ -182,28 +188,30 @@ GPT-5.3-Codex
 
 - Added Story 6.8 implementation for backend 429 enforcement + frontend/user-facing rate-limit UX.
 - Added new tests and passed full mobile regression suite.
+- Addressed code review findings — 3 items resolved (idempotency-abort-on-429, `Authorization` header threading, backend rate-limit test coverage). Date: 2026-08-17.
 
 ## Senior Developer Review (AI)
 
 ### Review Date
 
-2026-06-03
+2026-06-03 (findings below); follow-ups resolved and re-verified 2026-08-17
 
 ### Outcome
 
-Changes Requested
+Changes Requested → **Resolved** (2026-08-17)
 
 ### Findings
 
-1. [High] `enforce_user_rate_limit()` runs before idempotency replay/in-progress handling in `appraise_item()`. That means a repeated request with the same `Idempotency-Key` still increments the bucket before the replay path executes, so a legitimate retry can be rate-limited instead of receiving the cached response.
-2. [High] The frontend appraise client never sends an auth token, so the new authenticated `100/hour` tier is dead code. `camera.tsx` only reads `isGuest`, and `appraise()` posts `guest_session_id` plus `Idempotency-Key` but no `Authorization` header, so `_resolve_appraise_principal()` always falls back to guest scope.
-3. [Medium] The backend half of this story is not regression-tested. `backend/tests/test_rate_limits.py` covers delete-account, migrate-guest, and get-valuations only; there is no `/api/appraise` rate-limit test for guest/auth tier selection, `Retry-After`, or the new idempotency interaction.
+1. [High] `enforce_user_rate_limit()` runs before idempotency replay/in-progress handling in `appraise_item()`. That means a repeated request with the same `Idempotency-Key` still increments the bucket before the replay path executes, so a legitimate retry can be rate-limited instead of receiving the cached response. — **Resolved**, see Review Follow-ups.
+2. [High] The frontend appraise client never sends an auth token, so the new authenticated `100/hour` tier is dead code. `camera.tsx` only reads `isGuest`, and `appraise()` posts `guest_session_id` plus `Idempotency-Key` but no `Authorization` header, so `_resolve_appraise_principal()` always falls back to guest scope. — **Resolved**, see Review Follow-ups.
+3. [Medium] The backend half of this story is not regression-tested. `backend/tests/test_rate_limits.py` covers delete-account, migrate-guest, and get-valuations only; there is no `/api/appraise` rate-limit test for guest/auth tier selection, `Retry-After`, or the new idempotency interaction. — **Resolved**, see Review Follow-ups.
 
 ### Recommended Actions
 
-- Complete the Review Follow-ups (AI) items above.
-- Re-run backend tests in an environment with `fastapi`, `pydantic`, `supabase`, and `httpx` installed.
+- ~~Complete the Review Follow-ups (AI) items above.~~ Done 2026-08-17.
+- ~~Re-run backend tests in an environment with `fastapi`, `pydantic`, `supabase`, and `httpx` installed.~~ Done — full backend suite green (172 passed, 10 skipped).
 
 ### Review Entry
 
 - 2026-06-03: Review completed with 2 High and 1 Medium findings. Story returned to `in-progress` pending follow-up fixes.
+- 2026-08-17: All 3 findings verified resolved in code (`main.py`, `idempotency.py`, `api.ts`, `camera.tsx`) and covered by new/updated tests. Full mobile (359/359) and backend (172/172, 10 skipped) suites green. Story marked `done`.

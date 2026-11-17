@@ -115,7 +115,7 @@ describe('SignInScreen — Google OAuth', () => {
     expect(mockExchangeCodeForSession).toHaveBeenCalledWith('test-auth-code');
   });
 
-  it('navigates to /(tabs) when the OAuth browser returns success', async () => {
+  it('navigates to /camera when the OAuth browser returns success', async () => {
     mockSignInWithOAuth.mockResolvedValue({
       data: { url: 'https://accounts.google.com/oauth' },
       error: null,
@@ -140,7 +140,7 @@ describe('SignInScreen — Google OAuth', () => {
       googleButton.props.onPress();
     });
 
-    expect(router.replace).toHaveBeenCalledWith('/');
+    expect(router.replace).toHaveBeenCalledWith('/camera');
   });
 
   it('shows error message when signInWithOAuth returns error', async () => {

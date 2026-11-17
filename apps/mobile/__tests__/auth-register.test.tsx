@@ -177,7 +177,7 @@ describe('RegisterScreen', () => {
 
   // ── H1: happy-path — session active ─────────────────────────────────────────
 
-  it('calls router.replace("/(tabs)") on successful registration with active session', async () => {
+  it('calls router.replace("/camera") on successful registration with active session', async () => {
     mockSignUp.mockResolvedValue({
       data: { session: { access_token: 'token' }, user: {} },
       error: null,
@@ -202,7 +202,7 @@ describe('RegisterScreen', () => {
       email: 'test@example.com',
       password: 'password123',
     });
-    expect(mockRouterReplace).toHaveBeenCalledWith('/');
+    expect(mockRouterReplace).toHaveBeenCalledWith('/camera');
   });
 
   // ── H2a: server error — duplicate email ──────────────────────────────────────

@@ -134,7 +134,7 @@ describe('SignInScreen', () => {
     expect(showAlert).toHaveBeenCalled();
   });
 
-  it('calls router.replace("/(tabs)") on successful sign-in', async () => {
+  it('calls router.replace("/camera") on successful sign-in', async () => {
     mockSignInWithPassword.mockResolvedValue({
       data: { session: { access_token: 'token' }, user: {} },
       error: null,
@@ -158,7 +158,7 @@ describe('SignInScreen', () => {
       email: 'user@example.com',
       password: 'correctpassword',
     });
-    expect(mockRouterReplace).toHaveBeenCalledWith('/');
+    expect(mockRouterReplace).toHaveBeenCalledWith('/camera');
   });
 
   it('shows incorrect credentials error when Supabase returns invalid login error', async () => {

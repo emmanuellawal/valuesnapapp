@@ -1,8 +1,12 @@
 # backend/models.py
-from pydantic import BaseModel, Field, field_validator
+import logging
+
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Any, Dict, List, Literal, Optional
 from decimal import Decimal
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 class Identifiers(BaseModel):
@@ -38,11 +42,54 @@ class ConfidenceFactorsModel(BaseModel):
     data_source_penalty: bool = Field(default=False, description="True if fallback search was used")
 
 
+# Story 6-14: grounding floor + generic-word list. Tests import both; do not duplicate.
+# 40 is a floor against empty/one-token observations, not a measure of description quality.
+MIN_VISIBLE_OBSERVATIONS = 40
+GENERIC_IDENTITY_TOKENS = frozenset(
+    {"item", "object", "product", "thing", "unknown", "stuff", "miscellaneous", "misc"}
+)
+# Placeholder strings a model emits for "no brand/model"; stored as "unknown".
+_UNKNOWN_ALIASES = frozenset({"n/a", "na", "none", "null", "unidentified"})
+_STRIP_PUNCTUATION = " \t\n.,;:!?\"'"
+
+
+def _normalize_token(value: str) -> str:
+    return (value or "").strip(_STRIP_PUNCTUATION).lower()
+
+
+def _is_placeholder_token(value: str) -> bool:
+    """True when a token is blank, punctuation-only, generic, or an unknown-alias."""
+    normalized = _normalize_token(value)
+    return (
+        not normalized
+        or normalized in GENERIC_IDENTITY_TOKENS
+        or normalized in _UNKNOWN_ALIASES
+    )
+
+
+def _normalize_identity_field(value: str) -> str:
+    """Return 'unknown' for blank/generic/placeholder brand or model values."""
+    stripped = (value or "").strip()
+    if _is_placeholder_token(stripped):
+        return "unknown"
+    return stripped
+
+
 class ItemIdentity(BaseModel):
     """
     Strictly visual identification. No value judgment.
     GPT is a Visual Detective, not a Price Guide.
+
+    Field order is the structured-output order: visible_observations MUST be first
+    so the model describes what it sees before it names a brand/model (Story 6-14).
     """
+    visible_observations: str = Field(
+        description=(
+            "Describe ONLY what is visible, before naming anything: shape, colors, materials, "
+            "text/logos exactly as read, form factor, connectors. "
+            "Name a brand or model in this field only when that text is literally printed on the item."
+        )
+    )
     item_type: str = Field(description="Specific item category (e.g., 'wireless headphones')")
     brand: str = Field(description="Brand name if identifiable, otherwise 'unknown'")
     model: str = Field(default="unknown", description="Model name or number")
@@ -78,15 +125,79 @@ class ItemIdentity(BaseModel):
         description="AI's certainty about identification: HIGH (brand/model clear), MEDIUM (category clear), LOW (mostly guessing)"
     )
     
-    @field_validator("search_keywords")
-    @classmethod
-    def ensure_keywords_not_empty(cls, v: List[str], info) -> List[str]:
-        """Ensure at least 1 search keyword is provided."""
-        if not v or len(v) == 0:
-            # If we have access to item_type from the data, use it as fallback
-            # Otherwise return a generic placeholder
-            return ["item"]
-        return v
+    @model_validator(mode="after")
+    def enforce_grounding_and_abstention(self) -> "ItemIdentity":
+        """
+        Story 6-14. One hook, in this order (a field validator would run before
+        brand/model normalization and could not see it):
+          1. normalize brand/model placeholders to 'unknown'
+          2. drop blank, generic, and unknown-alias keywords
+          3. replace a generic item_type with the first specific keyword, or raise
+          4. coerce ai_identification_confidence against the stored identity
+          5. if no keyword survived, fall back to the specific item_type
+
+        Coercible HIGH is downgraded, not rejected. Only the generic-keyword dead end
+        raises, because there is nothing left to search with. The LOW row stays as a
+        backstop; a successful result no longer keeps a generic item_type.
+        """
+        self.brand = _normalize_identity_field(self.brand)
+        self.model = _normalize_identity_field(self.model)
+
+        # Drop blank, punctuation-only, generic, and unknown-alias keywords.
+        # "" is not in GENERIC_IDENTITY_TOKENS, so a membership test alone keeps it.
+        specific = [
+            kw.strip()
+            for kw in self.search_keywords
+            if not _is_placeholder_token(kw)
+        ]
+
+        raw_item_type = (self.item_type or "").strip()
+        if _is_placeholder_token(raw_item_type):
+            if not specific:
+                raise ValueError(
+                    "No specific search keyword and item_type is generic; "
+                    "cannot build a usable search"
+                )
+            # Abstention must keep a specific category. Use the descriptor the
+            # model already produced instead of persisting "item".
+            logger.warning(
+                "Replacing generic item_type %r with specific keyword %r",
+                self.item_type,
+                specific[0],
+            )
+            self.item_type = specific[0]
+        else:
+            self.item_type = raw_item_type
+
+        item_type_generic = _is_placeholder_token(self.item_type)
+        name_unknown = self.brand == "unknown" or self.model == "unknown"
+        observations_thin = len((self.visible_observations or "").strip()) < MIN_VISIBLE_OBSERVATIONS
+
+        original = self.ai_identification_confidence
+        coerced = original
+        if name_unknown and item_type_generic:
+            coerced = "LOW"
+        elif original == "HIGH" and (name_unknown or observations_thin):
+            coerced = "MEDIUM"
+
+        if coerced != original:
+            logger.warning(
+                "Coercing ai_identification_confidence %s -> %s "
+                "(brand=%r, model=%r, item_type=%r, observations_len=%d)",
+                original,
+                coerced,
+                self.brand,
+                self.model,
+                self.item_type,
+                len((self.visible_observations or "").strip()),
+            )
+            self.ai_identification_confidence = coerced
+
+        if not specific:
+            specific = [self.item_type]
+        self.search_keywords = specific
+
+        return self
 
 
 # ~10 MB binary → base64 is ~133% size → 13_400_000 chars max

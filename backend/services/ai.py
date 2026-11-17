@@ -43,19 +43,27 @@ Act as an expert archivist and product identifier. Analyze this image visually.
 - Do NOT estimate value or price
 - Do NOT guess rarity or demand
 - Do NOT make market predictions
-- Do NOT leave the output bland when brand/model is uncertain
-- Do not use Unknown as a substitute for useful descriptors
+- Do not use Unknown as a substitute for useful descriptors (this applies to item_type and search_keywords, never to a brand/model you are guessing)
+- A brand or model must be earned by what you can see. Never name a famous product because the shape is vaguely similar
 
 ## YOUR TASK
-Extract precise identification data that would retrieve this exact item from eBay's database.
+Extract precise identification data that would retrieve this exact item from eBay's database. Work in this order: describe first, name second.
 
-1. **Identify**: Brand, Model, Item Type
-   - Tier 1: If the brand, model, generation, or version is visible or visually distinctive, identify it precisely
-   - Tier 2: If brand/model is not visible enough to identify, keep brand/model as "Unknown" but make item_type and search_keywords highly descriptive
-   - Be specific: "Sony WH-1000XM4 wireless headphones" not just "headphones"
-   - Include generation/version if visible or strongly indicated by the product design
+1. **Visible Observations (write this FIRST, into `visible_observations`)**: Describe only what is physically visible
+   - Shape, colors, materials, size cues, form factor, connectors, buttons, ports
+   - Text and logos exactly as you can read them. If text is blurry or partial, say so; do not complete it from memory
+   - Do NOT name a brand or model in this field unless that name is literally printed on the item
+   - Write at least a full sentence or two. A one-word or empty description means you cannot name the item
 
-2. **Visual Condition**: Describe ONLY what you see
+2. **Identify**: Brand, Model, Item Type — derive these only from the visible observations you just wrote
+   - The brand and model must be supported by the observations above (printed text, a distinctive logo, or an unmistakable design). If they are not, they are unknown
+   - Tier 1: Grounded naming only. If the brand, model, generation, or version is visible in your observations or unmistakable from them, identify it precisely
+   - Tier 2: If the observations do not support a brand/model, set brand and model to "unknown" and make item_type and search_keywords specific with visual descriptors
+   - Item type must stay specific even when brand/model is unknown: "over-ear wireless headphones" not "item" or "product"
+   - Be specific: "Sony WH-1000XM4 wireless headphones" not just "headphones", but only when the observations support it
+   - Include generation/version only if visible or unmistakable from the observations
+
+3. **Visual Condition**: Describe ONLY what you see
    - Use only one of these exact values for visual_condition:
      - new: Factory sealed, tags attached, pristine packaging
      - used_excellent: No visible wear, appears complete
@@ -64,32 +72,34 @@ Extract precise identification data that would retrieve this exact item from eBa
      - damaged: Cracks, dents, missing parts, broken components
    - Do not output free-text condition labels
 
-3. **Condition Details**: List specific observations
+4. **Condition Details**: List specific observations
    - Location and severity of any wear
    - Missing components you can identify
    - Packaging state if visible
 
-4. **Extract Identifiers**: Read any visible text
+5. **Extract Identifiers**: Read any visible text
    - Model numbers, serial numbers, UPC codes
    - Only report what you can clearly read
 
-5. **Search Keywords**: Generate 3-5 PRECISE terms for eBay search
-   - Format: "[Brand] [Model] [Key descriptor]"
+6. **Search Keywords**: Generate 3-5 PRECISE terms for eBay search
+   - Put the single most specific phrase FIRST (only the first few are searched)
+   - Known brand/model format: "[Brand] [Model] [Key descriptor]"
    - Include condition modifier if relevant
    - Think: what would a buyer search to find this exact item?
-   - IMPORTANT: Always provide at least 1 keyword, even for unknown items
    - For unknown brand/model, use visual descriptors: material, color, form factor, visible logos/text, connector type, era, size, and distinctive features
+   - Never use a placeholder word such as "item", "object", "product", "thing", or "stuff" as a keyword
    - Example unknown-brand keyword: "premium over-ear wireless headphones space gray aluminum"
 
-6. **Description**: Write a 1-3 sentence description suitable for an eBay listing
+7. **Description**: Write a 1-3 sentence description suitable for an eBay listing
    - Focus on key features and condition
    - Be factual, not promotional
-   - Include brand, model, and notable characteristics
+   - Mention a brand or model only if that field is not "unknown"
 
-7. **AI Identification Confidence**: Rate your identification confidence
-   - HIGH: Brand and model clearly visible and identifiable
-   - MEDIUM: Category clear but brand/model specifics uncertain
+8. **AI Identification Confidence**: Rate your identification confidence
+   - HIGH: Brand and model are both named AND supported by your visible observations (printed text or unmistakable design)
+   - MEDIUM: Category clear but brand/model specifics uncertain or unsupported
    - LOW: Mostly guessing based on limited visual information
+   - HIGH is not allowed when brand or model is "unknown"
 
 Output JSON matching the ItemIdentity schema.
 """
@@ -163,18 +173,17 @@ async def identify_item_from_image(base64_image: str) -> ItemIdentity:
         client = _get_client()
         
         result = await _call_openai_api(client, base64_image)
-        
+        if result is None:
+            raise ValueError("OpenAI returned no parsed ItemIdentity")
+
         elapsed = time.time() - start_time
         logger.info(f"AI identification took {elapsed:.2f}s - Identified: {result.brand} {result.model} ({result.item_type})")
         
         if elapsed > 2.5:
             logger.warning(f"AI identification slow: {elapsed:.2f}s > 2.5s threshold")
         
-        # Ensure search_keywords always has at least 1 entry
-        if not result.search_keywords:
-            result.search_keywords = [f"{result.item_type}"]
-            logger.warning("AI returned empty search_keywords, using item_type as fallback")
-        
+        # ItemIdentity's model_validator already guarantees specific, non-generic
+        # search_keywords (or raised). Do not reintroduce a placeholder fallback here.
         return result
         
     except RETRY_EXCEPTIONS as e:

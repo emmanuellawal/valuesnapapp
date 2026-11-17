@@ -6,6 +6,8 @@
  * @see Story 1.2: Implement File Upload for Desktop
  */
 
+import type React from 'react';
+import type { View } from 'react-native';
 import { CapturedPhoto } from '../camera-capture/types';
 
 /**
@@ -38,6 +40,8 @@ export interface FileUploadProps {
   onStateChange?: (state: FileUploadState) => void;
   /** Optional test ID for testing */
   testID?: string;
+  /** Primary upload control ref used to restore focus after modal overlays close */
+  focusRef?: React.Ref<View>;
 }
 
 // Re-export CapturedPhoto for convenience

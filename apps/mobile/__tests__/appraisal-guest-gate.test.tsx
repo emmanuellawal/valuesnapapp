@@ -121,11 +121,11 @@ describe('AppraisalReportScreen — guest listing gate', () => {
     return renderer!;
   }
 
-  it('redirects guests to register when List on eBay is pressed', async () => {
+  it('redirects guests to register when Create listing is pressed', async () => {
     mockUseAuth.mockReturnValue(guestAuth());
 
     const renderer = await renderScreen();
-    const button = renderer.root.findByProps({ accessibilityLabel: 'List on eBay' });
+    const button = renderer.root.findByProps({ accessibilityLabel: 'Create listing' });
 
     await act(async () => {
       button.props.onPress();
@@ -139,7 +139,7 @@ describe('AppraisalReportScreen — guest listing gate', () => {
     mockUseAuth.mockReturnValue(authenticatedAuth());
 
     const renderer = await renderScreen();
-    const button = renderer.root.findByProps({ accessibilityLabel: 'List on eBay' });
+    const button = renderer.root.findByProps({ accessibilityLabel: 'Create listing' });
 
     await act(async () => {
       button.props.onPress();

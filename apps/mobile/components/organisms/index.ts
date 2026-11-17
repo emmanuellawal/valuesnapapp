@@ -20,4 +20,8 @@ export type { ListingFormProps } from './listing-form';
 export { ListingForm } from './listing-form';
 
 export { SwissTabBar } from './swiss-tab-bar';
-export { SwissSidebar } from './swiss-sidebar';
+export { SwissSidebar, SwissSidebarNav } from './swiss-sidebar';
+export type { SwissSidebarItem, SwissSidebarNavSemantics } from './swiss-sidebar';
+
+export { AppraisalWorkstation } from './appraisal-workstation';
+export type { AppraisalWorkstationProps } from './appraisal-workstation';

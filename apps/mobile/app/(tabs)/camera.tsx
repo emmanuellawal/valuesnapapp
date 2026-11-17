@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Platform } from 'react-native';
+import { AccessibilityInfo, Platform, useWindowDimensions, View } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter, useFocusEffect } from 'expo-router';
 
@@ -11,6 +12,7 @@ import {
   ErrorState,
   GuestBanner,
   NetworkBanner,
+  ValuationResultOverlay,
   type ErrorType,
 } from '@/components/molecules';
 import { CameraCapture, FileUpload, type CapturedPhoto } from '@/components/organisms';
@@ -21,8 +23,17 @@ import { getLocalHistory, getOrCreateGuestSessionId, saveToLocalHistory } from '
 import { useAuth } from '@/contexts/AuthContext';
 import { transformValuationResponse } from '@/types/transformers';
 import { ValuationStatus } from '@/types/valuation';
+import { BREAKPOINTS } from '@/constants/breakpoints';
 import type { ItemDetails } from '@/types/item';
 import type { MarketData } from '@/types/market';
+
+interface CameraResult {
+  item: ItemDetails;
+  market: MarketData;
+  imageUri: string;
+  reportId?: string | null;
+}
+
 
 /**
  * Read an image URI as a base64-encoded string for API submission.
@@ -78,6 +89,19 @@ async function stabilizeImageUri(uri: string): Promise<string> {
 export default function CameraScreen() {
   const router = useRouter();
   const { isGuest, accessToken } = useAuth();
+  const { width } = useWindowDimensions();
+  const insets = React.useContext(SafeAreaInsetsContext) ?? {
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  };
+  // AC #3: full-bleed capture surface is a mobile-width-only pattern.
+  // [Source: apps/mobile/constants/breakpoints.ts#L5-9] BREAKPOINTS.tablet = 600
+  const isMobileWidth = width < BREAKPOINTS.tablet;
+  // Ref to the actual capture control so focus can return to it when the
+  // result overlay is dismissed (AC #7 / Modal Rules: "Return focus on close").
+  const captureControlRef = useRef<View>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadKey, setUploadKey] = useState(0);
   const [guestValuationCount, setGuestValuationCount] = useState(0);
@@ -86,20 +110,12 @@ export default function CameraScreen() {
     message?: string;
     retryAfterSeconds?: number;
   } | null>(null);
-  const [lastResult, setLastResult] = useState<{
-    item: ItemDetails;
-    market: MarketData;
-    imageUri: string;
-  } | null>(null);
+  const [lastResult, setLastResult] = useState<CameraResult | null>(null);
   
   // Store the last photo for retry functionality
   const lastPhotoRef = useRef<CapturedPhoto | null>(null);
   // Persist the most recent successful result for the bottom section
-  const recentResultRef = useRef<{
-    item: ItemDetails;
-    market: MarketData;
-    imageUri: string;
-  } | null>(null);
+  const recentResultRef = useRef<CameraResult | null>(null);
   
   // Network awareness — disables camera capture when offline
   const isOnline = useOnlineStatus();
@@ -217,32 +233,38 @@ export default function CameraScreen() {
       // Reset FileUpload component by incrementing key
       setUploadKey(prev => prev + 1);
       
-      // Store the result inline
-      const resultData = {
-        item: result.itemDetails,
-        market: result.marketData,
-        imageUri: stableImageUri,
-      };
-      setLastResult(resultData);
-      recentResultRef.current = resultData;
-      
+      const createdAt = new Date().toISOString();
+      const localId = result.valuationId ?? createdAt;
+      let savedLocally = false;
       try {
-        await saveToLocalHistory({
-          id: result.valuationId ?? undefined,
-          createdAt: new Date().toISOString(),
+        savedLocally = await saveToLocalHistory({
+          id: localId,
+          createdAt,
           status: ValuationStatus.SUCCESS,
           request: { imageBase64: undefined },
           response: result,
           imageUri: stableImageUri,
         });
 
-        if (isGuest) {
+        if (savedLocally && isGuest) {
           const history = await getLocalHistory();
           setGuestValuationCount(history.length);
         }
       } catch {
         // Best-effort local persistence should not block the UI.
       }
+
+      // Publish the overlay only after its report destination is durable. An
+      // authenticated server ID remains a valid fallback if local storage is
+      // unavailable; guests use the serialized report payload.
+      const resultData: CameraResult = {
+        item: result.itemDetails,
+        market: result.marketData,
+        imageUri: stableImageUri,
+        reportId: savedLocally ? localId : (!isGuest ? result.valuationId : null),
+      };
+      setLastResult(resultData);
+      recentResultRef.current = resultData;
     } catch (err) {
       isProcessingRef.current = false;
       setIsProcessing(false);
@@ -267,6 +289,10 @@ export default function CameraScreen() {
   const handleViewReport = () => {
     const result = lastResult ?? recentResultRef.current;
     if (!result) return;
+    if (result.reportId) {
+      router.push(`/appraisal?id=${result.reportId}`);
+      return;
+    }
     const params = new URLSearchParams({
       imageUri: result.imageUri,
       brand: result.item.brand,
@@ -282,10 +308,21 @@ export default function CameraScreen() {
   };
 
   /**
-   * Dismiss result and value another item
+   * Dismiss result and value another item.
+   * Returns focus to the capture control per the overlay's Modal Rules
+   * ("Return focus on close").
    */
   const handleValueAnother = () => {
     setLastResult(null);
+    requestAnimationFrame(() => {
+      const node = captureControlRef.current;
+      if (!node) return;
+      if (Platform.OS === 'web') {
+        (node as unknown as { focus?: () => void }).focus?.();
+      } else {
+        AccessibilityInfo.sendAccessibilityEvent(node, 'focus');
+      }
+    });
   };
 
   // ── Offline gate ───────────────────────────────────────────────────────────
@@ -329,105 +366,149 @@ export default function CameraScreen() {
     `Try again in ${retryMinutes} minute${retryMinutes === 1 ? '' : 's'}`,
   ];
 
+  // AC #3: full-bleed capture surface — mobile widths only, and only when
+  // there is nothing else to show (no error, not processing). It stays
+  // rendered while lastResult is set so the result overlay has a surface
+  // to slide over. [Source: docs/ux-design-specification.md#L2304-2316]
+  const showFullBleed = isMobileWidth && !error && !isProcessing;
+
+  const captureSurface = Platform.OS === 'web' ? (
+    <FileUpload
+      key={uploadKey}
+      focusRef={captureControlRef}
+      onPhotoCapture={handlePhotoCapture}
+    />
+  ) : (
+    <CameraCapture
+      key={uploadKey}
+      focusRef={captureControlRef}
+      onPhotoCapture={handlePhotoCapture}
+    />
+  );
+
+  // AC #4/#7: the successful result now renders as a sliding overlay over
+  // the capture surface instead of an inline card in the scroll column.
+  const resultOverlay = lastResult ? (
+    <ValuationResultOverlay
+      item={lastResult.item}
+      market={lastResult.market}
+      imageUri={lastResult.imageUri}
+      onViewReport={handleViewReport}
+      onDismiss={handleValueAnother}
+    />
+  ) : null;
+
+  if (showFullBleed) {
+    return (
+      <>
+        <Box
+          testID="camera-fullbleed-surface"
+          className="flex-1 bg-paper w-full"
+          style={{ paddingTop: Math.max(insets.top, 64) }}
+          accessibilityElementsHidden={Boolean(lastResult)}
+          importantForAccessibility={lastResult ? 'no-hide-descendants' : 'auto'}
+          aria-hidden={lastResult ? true : undefined}
+        >
+          <Box className="px-6">
+            <Text variant="display">What are you{'\n'}selling?</Text>
+            <Text variant="body" className="text-ink-light mt-3">
+              Snap a photo and we{"'"}ll find its value
+            </Text>
+            <Box className="h-px bg-divider mt-8" />
+          </Box>
+
+          <View style={{ flex: 1, marginTop: 32 }}>
+            {captureSurface}
+          </View>
+        </Box>
+
+        {isGuest && guestValuationCount >= 3 && (
+          <Box className="absolute left-0 right-0 bottom-0 px-6">
+            <GuestBanner visible />
+          </Box>
+        )}
+
+        {resultOverlay}
+      </>
+    );
+  }
+
   return (
-    <ScreenContainer>
-      {/* Header — dramatic typographic hierarchy */}
-      <Text variant="display">What are you{'\n'}selling?</Text>
-      <Text variant="body" className="text-ink-light mt-3">
-        Snap a photo and we{"'"}ll find its value
-      </Text>
+    <>
+      <ScreenContainer
+        accessibilityElementsHidden={Boolean(lastResult)}
+        importantForAccessibility={lastResult ? 'no-hide-descendants' : 'auto'}
+        aria-hidden={lastResult ? true : undefined}
+      >
+        {/* Header — dramatic typographic hierarchy */}
+        <Text variant="display">What are you{'\n'}selling?</Text>
+        <Text variant="body" className="text-ink-light mt-3">
+          Snap a photo and we{"'"}ll find its value
+        </Text>
 
-      <Box className="h-px bg-divider mt-8" />
+        <Box className="h-px bg-divider mt-8" />
 
-      {/* Primary action area — full width for authority */}
-      <Box className="mt-8">
-        {lastResult ? (
-          /* Inline result — Swiss-styled, no native Alert */
-          <Stack gap={4}>
-            <Text variant="h3" className="font-bold">Valuation complete</Text>
-            <Box className="w-full">
-              <ValuationCard
-                itemDetails={lastResult.item}
-                marketData={lastResult.market}
-                imageUri={lastResult.imageUri}
-                onPress={handleViewReport}
+        {/* Primary action area — full width for authority */}
+        <Box className="mt-8">
+          {error ? (
+            <Stack gap={4}>
+              <ErrorState
+                errorType={error.type}
+                suggestions={isRateLimitError ? rateLimitSuggestions : undefined}
+                onRetry={isRateLimitError ? undefined : handleRetry}
+                onDismiss={isRateLimitError ? () => setError(null) : undefined}
+                fallbackLink={isRateLimitError
+                  ? (isGuest ? { text: 'Create a free account', href: '/auth/register' } : undefined)
+                  : {
+                    text: 'Search eBay manually',
+                    href: buildEbaySearchUrl(),
+                  }}
               />
-            </Box>
-            <Stack direction="horizontal" gap={3}>
-              <SwissPressable
-                accessibilityLabel="View full appraisal report"
-                onPress={handleViewReport}
-                className="border border-ink bg-ink px-4 py-3"
-              >
-                <Text variant="body" className="text-paper font-semibold">View report</Text>
-              </SwissPressable>
-              <SwissPressable
-                accessibilityLabel="Value another item"
-                onPress={handleValueAnother}
-                className="border border-divider bg-paper px-4 py-3"
-              >
-                <Text variant="body" className="text-ink">Value another</Text>
-              </SwissPressable>
+              <NetworkBanner errorType={error.type} isOnline={isOnline} />
+            </Stack>
+          ) : isProcessing ? (
+            <Stack gap={6} className="py-8">
+              <ProgressIndicator
+                stage={stage}
+                stageProgress={stageProgress}
+                isOvertime={isOvertime}
+              />
+              <Box className="w-full">
+                <ValuationCardSkeleton />
+              </Box>
+            </Stack>
+          ) : (
+            <View>{captureSurface}</View>
+          )}
+        </Box>
+
+        <Box className="h-px bg-divider mt-8" />
+
+        <GuestBanner visible={isGuest && guestValuationCount >= 3} />
+
+        {/* Recent valuations — shows last real result when available */}
+        {!lastResult && recentResultRef.current && !isProcessing && !error && (
+          <Stack gap={4} className="mt-8">
+            <Text variant="h2">Recent valuations</Text>
+            <Text variant="caption" className="text-ink-muted -mt-2 uppercase tracking-wide">
+              Your latest finds
+            </Text>
+
+            <Stack direction="horizontal" gap={4} className="flex-wrap mt-2">
+              <Box className="w-full">
+                <ValuationCard
+                  itemDetails={recentResultRef.current.item}
+                  marketData={recentResultRef.current.market}
+                  imageUri={recentResultRef.current.imageUri}
+                  onPress={handleViewReport}
+                />
+              </Box>
             </Stack>
           </Stack>
-        ) : error ? (
-          <Stack gap={4}>
-            <ErrorState
-              errorType={error.type}
-              suggestions={isRateLimitError ? rateLimitSuggestions : undefined}
-              onRetry={isRateLimitError ? undefined : handleRetry}
-              onDismiss={isRateLimitError ? () => setError(null) : undefined}
-              fallbackLink={isRateLimitError
-                ? (isGuest ? { text: 'Create a free account', href: '/auth/register' } : undefined)
-                : {
-                  text: 'Search eBay manually',
-                  href: buildEbaySearchUrl(),
-                }}
-            />
-            <NetworkBanner errorType={error.type} isOnline={isOnline} />
-          </Stack>
-        ) : isProcessing ? (
-          <Stack gap={6} className="py-8">
-            <ProgressIndicator
-              stage={stage}
-              stageProgress={stageProgress}
-              isOvertime={isOvertime}
-            />
-            <Box className="w-full">
-              <ValuationCardSkeleton />
-            </Box>
-          </Stack>
-        ) : Platform.OS === 'web' ? (
-          <FileUpload key={uploadKey} onPhotoCapture={handlePhotoCapture} />
-        ) : (
-          <CameraCapture onPhotoCapture={handlePhotoCapture} />
         )}
-      </Box>
+      </ScreenContainer>
 
-      <Box className="h-px bg-divider mt-8" />
-
-      <GuestBanner visible={isGuest && guestValuationCount >= 3} />
-
-      {/* Recent valuations — shows last real result when available */}
-      {!lastResult && recentResultRef.current && !isProcessing && !error && (
-        <Stack gap={4} className="mt-8">
-          <Text variant="h2">Recent valuations</Text>
-          <Text variant="caption" className="text-ink-muted -mt-2 uppercase tracking-wide">
-            Your latest finds
-          </Text>
-
-          <Stack direction="horizontal" gap={4} className="flex-wrap mt-2">
-            <Box className="w-full">
-              <ValuationCard
-                itemDetails={recentResultRef.current.item}
-                marketData={recentResultRef.current.market}
-                imageUri={recentResultRef.current.imageUri}
-                onPress={handleViewReport}
-              />
-            </Box>
-          </Stack>
-        </Stack>
-      )}
-    </ScreenContainer>
+      {resultOverlay}
+    </>
   );
 }

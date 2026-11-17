@@ -53,6 +53,52 @@ describe('appraise', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
+  it('recovers without spending quota when the idempotency migration is missing', async () => {
+    jest.useFakeTimers();
+    const unavailable = () => ({
+      ok: false,
+      status: 503,
+      json: () => Promise.resolve({
+        error: {
+          code: 'IDEMPOTENCY_UNAVAILABLE',
+          message: 'Unable to safely process this request right now',
+        },
+      }),
+    });
+    const mockResponse = {
+      identity: { brand: 'Canon' },
+      valuation: { fair_market_value: 200 },
+      confidence: { market_confidence: 'HIGH' },
+      valuation_id: 'uuid-1',
+    };
+
+    global.fetch = jest.fn()
+      .mockResolvedValueOnce(unavailable())
+      .mockResolvedValueOnce(unavailable())
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+    const promise = appraise('base64data', 'guest-123');
+    await jest.advanceTimersByTimeAsync(1_000);
+    await expect(promise).resolves.toEqual(mockResponse);
+
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+    const firstHeaders = (global.fetch as jest.Mock).mock.calls[0][1]
+      .headers as Record<string, string>;
+    const retryHeaders = (global.fetch as jest.Mock).mock.calls[1][1]
+      .headers as Record<string, string>;
+    const fallbackHeaders = (global.fetch as jest.Mock).mock.calls[2][1]
+      .headers as Record<string, string>;
+
+    expect(firstHeaders['Idempotency-Key']).toBeDefined();
+    expect(retryHeaders['Idempotency-Key']).toBe(firstHeaders['Idempotency-Key']);
+    expect(fallbackHeaders['Idempotency-Key']).toBeUndefined();
+    expect(fallbackHeaders['Content-Type']).toBe('application/json');
+  });
+
   it('reuses one Idempotency-Key across retry attempts', async () => {
     jest.useFakeTimers();
     const mockResponse = {
@@ -160,6 +206,33 @@ describe('appraise', () => {
       retryAfterSeconds: 60,
     });
     expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends Authorization Bearer header when accessToken is provided', async () => {
+    const mockResponse = {
+      identity: { brand: 'Canon' },
+      valuation: { fair_market_value: 200 },
+      confidence: { market_confidence: 'HIGH' },
+      valuation_id: 'uuid-1',
+    };
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    });
+
+    await appraise('base64data', 'guest-123', { accessToken: 'user-token' });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://test-api.local/api/appraise',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer user-token',
+        }),
+      }),
+    );
   });
 
   it('maps unknown error codes to GENERIC_ERROR', async () => {

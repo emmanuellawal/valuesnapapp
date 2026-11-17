@@ -189,7 +189,6 @@ async def appraise_item(http_request: Request, request: AnalyzeRequest):
     appraise_rate_rule = (
         APPRAISE_RATE_LIMIT_AUTH if principal_type == "user" else APPRAISE_RATE_LIMIT_GUEST
     )
-    enforce_user_rate_limit(principal_id, "appraise", appraise_rate_rule)
     idempotency_repo = None
 
     if idempotency_key:
@@ -234,6 +233,20 @@ async def appraise_item(http_request: Request, request: AnalyzeRequest):
                     },
                 },
             )
+
+    # Rate limit enforcement (after idempotency replay/in-progress handling).
+    # If this new request is rejected, drop the processing reservation so the
+    # same Idempotency-Key can be retried after Retry-After instead of 409.
+    try:
+        enforce_user_rate_limit(principal_id, "appraise", appraise_rate_rule)
+    except HTTPException as exc:
+        if exc.status_code == 429 and idempotency_key and idempotency_repo:
+            idempotency_repo.abort_request(
+                principal_type=principal_type,
+                principal_id=principal_id,
+                idempotency_key=idempotency_key,
+            )
+        raise
 
     # Step 1: Visual Identification (GPT)
     try:
@@ -348,6 +361,29 @@ def health_check():
     """Health check endpoint for monitoring."""
     return {"status": "healthy"}
 
+
+@app.get("/health/appraise")
+def appraisal_health_check():
+    """Check dependencies that can prevent appraisal work from starting."""
+    try:
+        AppraiseIdempotencyRepository().check_available()
+    except IdempotencyUnavailableError:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "degraded",
+                "appraisals_available": True,
+                "idempotency": "unavailable",
+                "recovery": "unkeyed_requests_supported",
+                "required_migration": "003_create_idempotency_keys_table.sql",
+            },
+        )
+
+    return {
+        "status": "healthy",
+        "appraisals_available": True,
+        "idempotency": "available",
+    }
 
 # ============================================================================
 # Admin/Observability Endpoints (Story 2-4)

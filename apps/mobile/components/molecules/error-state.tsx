@@ -13,6 +13,7 @@ export type ErrorType =
   | 'AI_TIMEOUT'
   | 'INVALID_IMAGE'
   | 'NETWORK_ERROR'
+  | 'SERVICE_UNAVAILABLE'
   | 'RATE_LIMIT'
   | 'GENERIC_ERROR';
 
@@ -47,6 +48,13 @@ const ERROR_CONFIG: Record<ErrorType, { title: string; suggestions: string[] }> 
     suggestions: [
       'Check your internet connection',
       "Your photo is ready — tap Try again to resubmit",
+    ],
+  },
+  SERVICE_UNAVAILABLE: {
+    title: 'Appraisal service unavailable',
+    suggestions: [
+      'Your photo was not processed or charged',
+      'Try again after the service is restored',
     ],
   },
   RATE_LIMIT: {

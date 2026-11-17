@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process';
-import { rm } from 'node:fs/promises';
+import { access, readFile, rm } from 'node:fs/promises';
+import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 import { chromium } from '@playwright/test';
@@ -55,6 +56,35 @@ async function main() {
   await run('npx', ['expo', 'export', '-p', 'web', '--output-dir', DIST_DIR], {
     env: exportEnv,
   });
+
+  // Story 6.5 AC5 + AC6 static export verification (landing page, /camera route, SEO tags, PWA assets)
+  for (const requiredFile of [
+    'index.html',
+    'camera.html',
+    'manifest.json',
+    'sw.js',
+    'icon-192.png',
+    'icon-512.png',
+  ]) {
+    await access(path.join(DIST_DIR, requiredFile));
+  }
+
+  const indexHtml = await readFile(path.join(DIST_DIR, 'index.html'), 'utf8');
+  if (!indexHtml.includes('Photo → Value → List')) {
+    throw new Error('dist/index.html is missing landing page hero copy');
+  }
+  if (
+    !indexHtml.includes('ValueSnap — Photo. Value. List.</title>') ||
+    !indexHtml.includes('name="description"') ||
+    !indexHtml.includes('property="og:title"')
+  ) {
+    throw new Error('dist/index.html is missing required Story 6.5 SEO head tags');
+  }
+
+  const cameraHtml = await readFile(path.join(DIST_DIR, 'camera.html'), 'utf8');
+  if (!cameraHtml.includes('What are you')) {
+    throw new Error('dist/camera.html is missing camera screen content');
+  }
 
   const server = spawn('python3', ['-m', 'http.server', String(PORT), '--directory', DIST_DIR], {
     stdio: 'ignore',

@@ -125,7 +125,7 @@ describe('CameraScreen — Guest mode', () => {
     mockGetOrCreateGuestSessionId.mockResolvedValue('guest-session-1');
     mockAppraise.mockResolvedValue({});
     mockTransformValuationResponse.mockReturnValue(mockValuationResponse());
-    mockSaveToLocalHistory.mockResolvedValue(undefined);
+    mockSaveToLocalHistory.mockResolvedValue(true);
   });
 
   async function renderScreen() {
@@ -184,7 +184,9 @@ describe('CameraScreen — Guest mode', () => {
     const renderer = await renderScreen();
     await capturePhoto(renderer);
 
-    expect(renderer.root.findByProps({ children: 'Valuation complete' })).toBeTruthy();
+    // Story 6.9: the valuation result now renders as an overlay (not an
+    // inline "Valuation complete" heading in the scroll column).
+    expect(renderer.root.findByProps({ testID: 'valuation-result-overlay' })).toBeTruthy();
     expect(renderer.root.findAllByProps({ testID: 'guest-banner' })).toHaveLength(0);
     expect(mockGetLocalHistory).toHaveBeenCalled();
   });

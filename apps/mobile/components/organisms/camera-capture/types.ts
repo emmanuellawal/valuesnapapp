@@ -7,6 +7,9 @@
  * @see Story 1.4: Photo Preview and Retake
  */
 
+import type React from 'react';
+import type { View } from 'react-native';
+
 /**
  * Camera state machine states
  * Represents the current state of the camera component
@@ -52,4 +55,6 @@ export interface CameraCaptureProps {
   onStateChange?: (state: CameraState) => void;
   /** Optional test ID for testing */
   testID?: string;
+  /** Primary capture control ref used to restore focus after modal overlays close */
+  focusRef?: React.Ref<View>;
 }

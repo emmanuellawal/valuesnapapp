@@ -106,7 +106,7 @@ export default function RegisterScreen() {
       showAlert(
         'Mock Mode',
         'Registration bypassed in mock mode.',
-        [{ text: 'OK', onPress: () => router.replace('/') }],
+        [{ text: 'OK', onPress: () => router.replace('/camera') }],
       );
       return;
     }
@@ -126,7 +126,7 @@ export default function RegisterScreen() {
       if (data.session) {
         // Session active: onAuthStateChange(SIGNED_IN) has already fired.
         // AuthContext is now updated. Navigate to app.
-        router.replace('/');
+        router.replace('/camera');
       } else {
         // Email confirmation required: session is null until user confirms.
         setSubmitState('confirm-email');
@@ -148,7 +148,7 @@ export default function RegisterScreen() {
     if (env.useMock) {
       setIsOAuthLoading(false);
       showAlert('Mock Mode', 'Google OAuth bypassed in mock mode.', [
-        { text: 'OK', onPress: () => router.replace('/') },
+        { text: 'OK', onPress: () => router.replace('/camera') },
       ]);
       return;
     }
@@ -189,7 +189,7 @@ export default function RegisterScreen() {
         }
 
         // Session established via exchangeCodeForSession → onAuthStateChange(SIGNED_IN) fires
-        router.replace('/');
+        router.replace('/camera');
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -221,7 +221,7 @@ export default function RegisterScreen() {
         <SwissPressable
           accessibilityLabel="Back to app"
           className="mt-12"
-          onPress={() => router.replace('/')}
+          onPress={() => router.replace('/camera')}
         >
           <Text variant="body" className="text-ink underline">
             Back to app

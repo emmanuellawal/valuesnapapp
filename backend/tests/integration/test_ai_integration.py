@@ -127,7 +127,7 @@ async def test_mock_ai_schema_compliance(monkeypatch):
     
     # Required fields
     required_fields = [
-        "item_type", "brand", "model", "visual_condition", 
+        "visible_observations", "item_type", "brand", "model", "visual_condition", 
         "condition_details", "search_keywords", "description",
         "ai_identification_confidence"
     ]
